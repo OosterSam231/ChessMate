@@ -3,59 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChessMate — Toernooi Manager by Sam Oosterlynck</title>
+<title>ChessMate — Toernooi Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#faf6f0;--bg2:#f0ebe3;--bg3:#e0d6c8;
-  --card:#fff;--cb:#ddd3c4;
-  --brown:#5c3d2e;--bl:#7a5a48;
-  --accent:#8b6914;
-  --tx:#3a2e24;--tx2:#6b5d50;--tx3:#9a8b7c;
-  --green:#4a7c59;--gl:#e8f0ea;
-  --red:#9c4040;--rl:#f5e8e8;
-  --gold:#b8942a;--goldl:#faf3e0;
-  --sh:0 1px 3px rgba(92,61,46,.08);
-}
+:root{--bg:#faf6f0;--bg2:#f0ebe3;--bg3:#e0d6c8;--card:#fff;--cb:#ddd3c4;--brown:#5c3d2e;--bl:#7a5a48;--accent:#8b6914;--tx:#3a2e24;--tx2:#6b5d50;--tx3:#9a8b7c;--green:#4a7c59;--gl:#e8f0ea;--red:#9c4040;--rl:#f5e8e8;--gold:#b8942a;--goldl:#faf3e0;--sh:0 1px 3px rgba(92,61,46,.08)}
 body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
 h1,h2,h3{font-family:'Playfair Display',serif;color:var(--brown)}
-button{cursor:pointer;font-family:inherit;transition:all .15s}
-button:hover{filter:brightness(1.08)}
-/* LOGIN SCREEN */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#faf6f0 0%,#e8e0d4 100%)}
+button{cursor:pointer;font-family:inherit;transition:all .15s}button:hover{filter:brightness(1.08)}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#faf6f0,#e8e0d4)}
 .login-box{background:var(--card);border-radius:16px;padding:40px 36px;max-width:380px;width:100%;box-shadow:0 8px 30px rgba(92,61,46,.12);text-align:center;border:1px solid var(--cb)}
 .login-logo{font-size:48px;color:var(--brown);display:block;margin-bottom:8px}
 .login-title{font-size:26px;color:var(--brown);margin-bottom:4px}
 .login-byline{font-size:12px;color:var(--tx3);letter-spacing:1px;margin-bottom:24px;display:block}
 .login-input{width:100%;padding:12px 16px;background:var(--bg);border:1.5px solid var(--cb);border-radius:10px;font-size:15px;color:var(--tx);outline:none;margin-bottom:12px;font-family:inherit;text-align:center}
-.login-input:focus{border-color:var(--bl)}
 .login-btn{width:100%;padding:12px;background:var(--brown);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;font-family:inherit;margin-bottom:10px}
 .login-err{color:var(--red);font-size:13px;min-height:20px;margin-top:4px}
-/* HEADER */
 .header{background:var(--card);border-bottom:1px solid var(--cb);position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
 .header-top{max-width:960px;margin:0 auto;padding:12px 20px 0;display:flex;align-items:center;gap:12px}
-.logo{font-size:28px;color:var(--brown)}
-.title-block{flex:1}
-.title{font-size:20px;color:var(--brown);margin:0}
-.byline{font-size:10px;color:var(--tx3);letter-spacing:1px}
+.logo{font-size:28px;color:var(--brown)}.title-block{flex:1}.title{font-size:20px;color:var(--brown);margin:0}.byline{font-size:10px;color:var(--tx3);letter-spacing:1px}
 .auth-area{display:flex;align-items:center;gap:8px}
 .role-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
-.role-visitor{background:var(--bg2);color:var(--tx3)}
-.role-importer{background:#e0ecf5;color:#2a6496}
-.role-host{background:var(--gl);color:var(--green)}
+.role-visitor{background:var(--bg2);color:var(--tx3)}.role-importer{background:#e0ecf5;color:#2a6496}.role-host{background:var(--gl);color:var(--green)}
 .nav{max-width:960px;margin:0 auto;display:flex;gap:2px;padding:0 16px;overflow-x:auto}
-.tab{padding:9px 14px;background:none;border:none;color:var(--tx3);font-size:14px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
-.tab.active{color:var(--brown);border-bottom-color:var(--brown)}
-/* MAIN */
+.tab{padding:9px 14px;background:none;border:none;color:var(--tx3);font-size:14px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}.tab.active{color:var(--brown);border-bottom-color:var(--brown)}
 .main{max-width:960px;margin:0 auto;padding:20px 16px 60px}
 .card{background:var(--card);border-radius:10px;padding:20px;margin-bottom:16px;border:1px solid var(--cb);box-shadow:var(--sh)}
 .card-title{font-size:16px;color:var(--brown);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bg3);font-weight:600}
 .input{padding:8px 14px;background:var(--bg);border:1px solid var(--cb);border-radius:8px;color:var(--tx);font-size:14px;outline:none}
-.input:focus{border-color:var(--bl)}
 .textarea{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--cb);border-radius:8px;color:var(--tx);font-size:13px;font-family:'Fira Code',monospace;outline:none;resize:vertical}
 .btn{padding:8px 18px;background:var(--brown);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600}
 .btn-outline{padding:8px 18px;background:transparent;border:1.5px solid var(--brown);border-radius:8px;color:var(--brown);font-size:14px;font-weight:600}
@@ -63,304 +41,167 @@ button:hover{filter:brightness(1.08)}
 .btn-danger{padding:3px 10px;background:var(--rl);border:1px solid #d4a0a0;border-radius:5px;color:var(--red);font-size:12px}
 .res-btn{padding:5px 12px;background:var(--bg2);border:1.5px solid var(--cb);border-radius:6px;color:var(--tx);font-size:13px;font-weight:700}
 .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--bg2);color:var(--tx2)}
-.chip{padding:6px 14px;background:var(--bg);border:1.5px solid var(--cb);border-radius:20px;color:var(--tx2);font-size:13px}
-.chip.active{background:var(--gl);border-color:var(--green);color:var(--green)}
+.chip{padding:6px 14px;background:var(--bg);border:1.5px solid var(--cb);border-radius:20px;color:var(--tx2);font-size:13px}.chip.active{background:var(--gl);border-color:var(--green);color:var(--green)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{padding:8px 10px;text-align:center;color:var(--tx3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--bg3)}
-td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--bg2)}
-tr:nth-child(even) td{background:var(--bg)}
+td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--bg2)}tr:nth-child(even) td{background:var(--bg)}
 .tl{text-align:left}.tr{text-align:right}
-.swap-hl{background:var(--goldl)!important;outline:2px solid var(--gold);border-radius:4px}
-.swap-banner{background:var(--goldl);border:1px solid #d4c088;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.list-item{padding:10px 0;border-bottom:1px solid var(--bg2)}
-.hint{color:var(--tx3);font-size:12px;margin-top:4px;line-height:1.5}
-.empty{color:var(--tx3);font-style:italic;padding:24px 0;text-align:center}
+.swap-banner{background:var(--goldl);border:1px solid #d4c088;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:90px;z-index:50}
+.list-item{padding:10px 0;border-bottom:1px solid var(--bg2)}.hint{color:var(--tx3);font-size:12px;margin-top:4px;line-height:1.5}.empty{color:var(--tx3);font-style:italic;padding:24px 0;text-align:center}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:var(--card);border-radius:12px;padding:28px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.modal{background:var(--card);border-radius:12px;padding:28px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto}
 .profile-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .profile-avatar{width:56px;height:56px;background:var(--brown);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-family:'Playfair Display',serif;flex-shrink:0}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin:14px 0}
 .stat-box{background:var(--bg);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--cb)}
-.stat-val{font-size:20px;font-weight:700;color:var(--brown);font-family:'Fira Code',monospace}
-.stat-label{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-.board-wrap{display:inline-block;border:2px solid var(--cb);border-radius:6px;overflow:hidden;user-select:none}
+.stat-val{font-size:20px;font-weight:700;color:var(--brown);font-family:'Fira Code',monospace}.stat-label{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.board-wrap{display:inline-block;border:2px solid var(--cb);border-radius:6px;overflow:hidden;user-select:none;position:relative}
+.board-overlay{position:absolute;inset:0;background:rgba(200,190,175,.7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:4px}
+.board-overlay .spinner{width:36px;height:36px;border:3px solid var(--bg3);border-top:3px solid var(--brown);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .eval-bar-v{width:26px;border-radius:6px;overflow:hidden;border:1px solid var(--cb);position:relative;background:#444}
-.eval-white{background:#f0ebe3;position:absolute;bottom:0;width:100%;transition:height .4s}
+.eval-white{background:#f0ebe3;position:absolute;bottom:0;width:100%;transition:height .3s}
 .eval-label{position:absolute;width:100%;text-align:center;font-size:9px;font-weight:700;font-family:'Fira Code',monospace;z-index:1}
 .move-list{max-height:280px;overflow-y:auto;font-family:'Fira Code',monospace;font-size:13px;line-height:1.9}
 .mn{color:var(--tx3);min-width:28px;display:inline-block;text-align:right;margin-right:4px}
-.mv{padding:1px 5px;border-radius:3px;cursor:pointer}
-.mv:hover{background:var(--bg3)}
-.mv.active{background:var(--gl);color:var(--green);font-weight:600}
+.mv{padding:1px 5px;border-radius:3px;cursor:pointer}.mv:hover{background:var(--bg3)}.mv.active{background:var(--gl);color:var(--green);font-weight:600}
+.mv-eval{font-size:10px;padding:0 3px;border-radius:3px;margin-left:2px;font-weight:600}
 .nav-btns button{padding:6px 14px;background:var(--bg2);border:1px solid var(--cb);border-radius:6px;font-size:16px;color:var(--tx)}
-.player-link{cursor:pointer;text-decoration:underline;text-decoration-color:var(--cb);text-underline-offset:2px}
-.player-link:hover{text-decoration-color:var(--brown)}
+.nav-btns button.disabled{opacity:.35;pointer-events:none}
+.player-link{cursor:pointer;text-decoration:underline;text-decoration-color:var(--cb);text-underline-offset:2px}.player-link:hover{text-decoration-color:var(--brown)}
 .loc-card{flex:1;min-width:160px;padding:16px;background:var(--bg);border-radius:10px;border:1px solid var(--cb);display:flex;flex-direction:column;gap:4px}
 .formula{background:var(--bg);border-radius:8px;padding:14px;margin-top:10px;font-family:'Fira Code',monospace;font-size:13px;color:var(--tx2);border:1px solid var(--cb)}
+.swap-pick{cursor:pointer;padding:3px 7px;display:inline-block;border-radius:4px;border:1.5px solid var(--cb);background:var(--bg2);transition:all .15s}
+.swap-pick:hover{border-color:var(--gold);background:var(--goldl)}
+.swap-pick.selected{border-color:var(--gold);background:var(--goldl);outline:2px solid var(--gold)}
 @media(max-width:640px){.main{padding:14px 10px 40px}.card{padding:14px}.title{font-size:18px}.header-top{flex-wrap:wrap}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
-// ════════════════════════════════════════
-// SUPABASE CONFIG — VUL HIER JE KEYS IN
-// ════════════════════════════════════════
-const SUPABASE_URL = "https://uzxuwyzhwsgnaitqgvtx.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6eHV3eXpod3NnbmFpdHFndnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjU2NTAsImV4cCI6MjA5MTc0MTY1MH0.6PPPWYpegPzQpkisIOwmOaeLIleSb7Yiq7QSjcE7Uv4";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-// ════════════════════════════════════════
-// PASSWORDS — hardcoded
-// ════════════════════════════════════════
-const PASSWORDS = { visitor: "Gast2026", importer: "Importer2026", host: "Host2026" };
-
-// ════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════
-const S = { role:null, tab:0, players:[], tournaments:[], games:[], activeT:null, swapMode:null, profileId:null, loading:true };
-const TABS=["Spelers","Toernooi","Partijen","Analyse","Info"], ICONS=["♟","⚔","📋","🔍","ℹ"], INIT_R=1500;
+const SUPABASE_URL="https://uzxuwyzhwsgnaitqgvtx.supabase.co";
+const SUPABASE_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6eHV3eXpod3NnbmFpdHFndnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjU2NTAsImV4cCI6MjA5MTc0MTY1MH0.6PPPWYpegPzQpkisIOwmOaeLIleSb7Yiq7QSjcE7Uv4";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+const PW={visitor:"Gast2026",importer:"Importer2026",host:"Host2026"};
+const S={role:null,tab:0,players:[],tournaments:[],games:[],activeT:null,swapMode:null,profileId:null,viewT:null,loading:true,analyzing:false,anEvals:[]};
+const TABS=["Spelers","Toernooi","Partijen","Analyse","Info"],ICONS=["♟","⚔","📋","🔍","ℹ"],INIT_R=1500;
 function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
-
-// ════════════════════════════════════════
-// SUPABASE DATA LAYER
-// ════════════════════════════════════════
-async function dbLoad(){
-  const [p,t,g] = await Promise.all([
-    sb.from("players").select("*").order("rating",{ascending:false}),
-    sb.from("tournaments").select("*").order("date",{ascending:false}),
-    sb.from("games").select("*").order("date",{ascending:false})
-  ]);
-  S.players = p.data||[];
-  S.tournaments = t.data||[];
-  S.games = g.data||[];
-  S.loading = false;
-}
-async function dbUpsertPlayer(p){
-  const{error}=await sb.from("players").upsert(p,{onConflict:"id"});
-  if(error)console.error(error);
-}
-async function dbDeletePlayer(id){await sb.from("players").delete().eq("id",id)}
-async function dbUpsertTournament(t){
-  const{error}=await sb.from("tournaments").upsert(t,{onConflict:"id"});
-  if(error)console.error(error);
-}
-async function dbInsertGame(g){
-  const{error}=await sb.from("games").insert(g);
-  if(error)console.error(error);
-}
-async function dbUpdateGame(id,data){await sb.from("games").update(data).eq("id",id)}
-async function dbDeleteGame(id){await sb.from("games").delete().eq("id",id)}
-
-// ════════════════════════════════════════
-// FIDE ELO
-// ════════════════════════════════════════
+// DB
+async function dbLoad(){const[p,t,g]=await Promise.all([sb.from("players").select("*").order("rating",{ascending:false}),sb.from("tournaments").select("*").order("date",{ascending:false}),sb.from("games").select("*").order("date",{ascending:false})]);S.players=p.data||[];S.tournaments=t.data||[];S.games=g.data||[];S.loading=false}
+async function dbUp(p){await sb.from("players").upsert(p,{onConflict:"id"})}
+async function dbDelP(id){await sb.from("players").delete().eq("id",id)}
+async function dbUT(t){await sb.from("tournaments").upsert(t,{onConflict:"id"})}
+async function dbDelT(id){await sb.from("tournaments").delete().eq("id",id)}
+async function dbIG(g){await sb.from("games").insert(g)}
+async function dbUG(id,d){await sb.from("games").update(d).eq("id",id)}
+async function dbDG(id){await sb.from("games").delete().eq("id",id)}
+// ELO
 function getK(r,g){return g<30?40:r<2400?20:10}
 function expSc(a,b){return 1/(1+Math.pow(10,(b-a)/400))}
 function fideUp(p,opps,res){if(!opps.length)return{rating:p.rating};const K=getK(p.rating,p.games_played||0);let r=p.rating;for(let i=0;i<opps.length;i++)r+=K*(res[i]-expSc(r,opps[i].rating));return{rating:Math.round(r)}}
-
-// ════════════════════════════════════════
-// SWISS PAIRING (rematches allowed when needed)
-// ════════════════════════════════════════
-function swissPair(players,prev){
-  const sc={},ch={},opp={};
-  players.forEach(p=>{sc[p.id]=0;ch[p.id]=[];opp[p.id]=new Set()});
-  prev.forEach(r=>r.forEach(({white,black,result})=>{
-    if(result==="1-0")sc[white]+=1;else if(result==="0-1")sc[black]+=1;
-    else if(result==="1/2-1/2"){sc[white]+=.5;sc[black]+=.5}else if(result==="bye")sc[white]+=1;
-    if(black){ch[white]?.push("w");ch[black]?.push("b");opp[white]?.add(black);opp[black]?.add(white)}}));
-  const sorted=[...players].sort((a,b)=>(sc[b.id]||0)-(sc[a.id]||0)||b.rating-a.rating);
-  const paired=new Set(),pairings=[];let bye=null;
-  if(sorted.length%2!==0){for(let i=sorted.length-1;i>=0;i--){const had=prev.some(r=>r.some(p=>p.white===sorted[i].id&&p.result==="bye"));if(!had){bye=sorted[i];break}}if(!bye)bye=sorted[sorted.length-1]}
-  function pickC(a,b){const d1=(ch[a.id]?.filter(c=>c==="w").length||0)-(ch[a.id]?.filter(c=>c==="b").length||0);const d2=(ch[b.id]?.filter(c=>c==="w").length||0)-(ch[b.id]?.filter(c=>c==="b").length||0);if(d1>d2)return[b.id,a.id];if(d1<d2)return[a.id,b.id];return a.rating>=b.rating?[a.id,b.id]:[b.id,a.id]}
-  // Pass 1: no rematches
-  for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;
-    for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id||opp[p1.id]?.has(p2.id))continue;
-      const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}
-  // Pass 2: allow rematches
-  for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;
-    for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id)continue;
-      const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}
-  if(bye)pairings.push({white:bye.id,black:null,result:"bye",board:pairings.length+1});
-  return pairings;
-}
-
-// ════════════════════════════════════════
-// PGN PARSER
-// ════════════════════════════════════════
+// SWISS
+function swissPair(players,prev){const sc={},ch={},opp={};players.forEach(p=>{sc[p.id]=0;ch[p.id]=[];opp[p.id]=new Set()});prev.forEach(r=>r.forEach(({white,black,result})=>{if(result==="1-0")sc[white]+=1;else if(result==="0-1")sc[black]+=1;else if(result==="1/2-1/2"){sc[white]+=.5;sc[black]+=.5}else if(result==="bye")sc[white]+=1;if(black){ch[white]?.push("w");ch[black]?.push("b");opp[white]?.add(black);opp[black]?.add(white)}}));const sorted=[...players].sort((a,b)=>(sc[b.id]||0)-(sc[a.id]||0)||b.rating-a.rating);const paired=new Set(),pairings=[];let bye=null;if(sorted.length%2!==0){for(let i=sorted.length-1;i>=0;i--){const had=prev.some(r=>r.some(p=>p.white===sorted[i].id&&p.result==="bye"));if(!had){bye=sorted[i];break}}if(!bye)bye=sorted[sorted.length-1]}function pickC(a,b){const d1=(ch[a.id]?.filter(c=>c==="w").length||0)-(ch[a.id]?.filter(c=>c==="b").length||0);const d2=(ch[b.id]?.filter(c=>c==="w").length||0)-(ch[b.id]?.filter(c=>c==="b").length||0);if(d1>d2)return[b.id,a.id];if(d1<d2)return[a.id,b.id];return a.rating>=b.rating?[a.id,b.id]:[b.id,a.id]}for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id||opp[p1.id]?.has(p2.id))continue;const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id)continue;const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}if(bye)pairings.push({white:bye.id,black:null,result:"bye",board:pairings.length+1});return pairings}
+// PGN
 function parsePGN(pgn){const games=[],secs=pgn.trim().split(/\n\s*\n(?=\[)/);for(const sec of secs){if(!sec.trim())continue;const h={};let m;const hr=/\[(\w+)\s+"([^"]*)"\]/g;while((m=hr.exec(sec))!==null)h[m[1]]=m[2];const mt=sec.replace(/\[.*?\]\s*/g,"").trim().replace(/\{[^}]*\}/g,"").replace(/\d+\.\.\./g,"").replace(/\d+\./g,"").split(/\s+/).filter(x=>x&&!["1-0","0-1","1/2-1/2","*"].includes(x));games.push({headers:h,moves:mt,raw:sec,result:h.Result||"*"})}return games.length?games:[{headers:{},moves:[],raw:pgn,result:"*"}]}
-
-// ════════════════════════════════════════
 // HELPERS
-// ════════════════════════════════════════
 function pN(id){return S.players.find(p=>p.id===id)?.name||"?"}
 function pR(id){return S.players.find(p=>p.id===id)?.rating||"?"}
 function pById(id){return S.players.find(p=>p.id===id)}
 function isHost(){return S.role==="host"}
 function isImp(){return S.role==="importer"||S.role==="host"}
-
-// ════════════════════════════════════════
-// RENDER ENGINE
-// ════════════════════════════════════════
-function R(){const root=document.getElementById("root");if(!S.role){renderLogin(root);return}if(S.loading){root.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--tx3)">Laden...</div>';return}
-  root.innerHTML=`<header class="header"><div class="header-top"><span class="logo">♛</span><div class="title-block"><h1 class="title">ChessMate</h1><span class="byline">by Sam Oosterlynck</span></div><div class="auth-area"><span class="role-badge role-${S.role}">${S.role==="host"?"Host":S.role==="importer"?"Importer":"Gast"}</span><button class="btn-sm" style="background:var(--bg2);color:var(--tx2);border:1px solid var(--cb);padding:5px 12px" onclick="doLogout()">Uitloggen</button></div></div><nav class="nav">${TABS.map((t,i)=>`<button class="tab${S.tab===i?" active":""}" onclick="setTab(${i})">${ICONS[i]} ${t}</button>`).join("")}</nav></header><main class="main" id="app"></main>`;
-  const app=document.getElementById("app");
-  if(S.profileId){renderProfile(app);return}
-  [renderSpelers,renderToernooi,renderPartijen,renderAnalyse,renderInfo][S.tab](app);
-}
-
-// ════════════════════════════════════════
-// LOGIN SCREEN
-// ════════════════════════════════════════
-function renderLogin(el){
-  el.innerHTML=`<div class="login-screen"><div class="login-box">
-    <span class="login-logo">♛</span>
-    <h1 class="login-title">ChessMate</h1>
-    <span class="login-byline">by Sam Oosterlynck</span>
-    <input class="login-input" type="password" id="loginPw" placeholder="Wachtwoord..." onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Inloggen</button>
-    <div class="login-err" id="loginErr"></div>
-  </div></div>`;
-  setTimeout(()=>document.getElementById("loginPw")?.focus(),100);
-}
-async function doLogin(){
-  const pw=document.getElementById("loginPw")?.value;
-  if(pw===PASSWORDS.host)S.role="host";
-  else if(pw===PASSWORDS.importer)S.role="importer";
-  else if(pw===PASSWORDS.visitor)S.role="visitor";
-  else{document.getElementById("loginErr").textContent="Fout wachtwoord.";return}
-  S.loading=true;R();
-  await dbLoad();R();
-}
-function doLogout(){S.role=null;S.tab=0;S.profileId=null;S.activeT=null;R()}
-function setTab(i){S.tab=i;S.swapMode=null;S.profileId=null;R()}
 function showModal(h){const m=document.createElement("div");m.id="modalRoot";m.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${h}</div></div>`;document.body.appendChild(m)}
 function closeModal(){document.getElementById("modalRoot")?.remove()}
-
-// ════════════════════════════════════════
+function getStandings(at){const sc={};(at.players||[]).forEach(id=>{sc[id]=0});(at.rounds||[]).forEach(r=>r.forEach(({white,black,result})=>{if(result==="1-0")sc[white]=(sc[white]||0)+1;else if(result==="0-1")sc[black]=(sc[black]||0)+1;else if(result==="1/2-1/2"){sc[white]=(sc[white]||0)+.5;sc[black]=(sc[black]||0)+.5}else if(result==="bye")sc[white]=(sc[white]||0)+1}));return Object.entries(sc).sort((a,b)=>b[1]-a[1]).map(([id,s])=>({id,name:pN(id),rating:pR(id),score:s}))}
+// RENDER
+function R(){const root=document.getElementById("root");if(!S.role){root.innerHTML=`<div class="login-screen"><div class="login-box"><span class="login-logo">♛</span><h1 class="login-title">ChessMate</h1><span class="login-byline">by Sam Oosterlynck</span><input class="login-input" type="password" id="loginPw" placeholder="Wachtwoord..." onkeydown="if(event.key==='Enter')doLogin()"><button class="login-btn" onclick="doLogin()">Inloggen</button><div class="login-err" id="loginErr"></div></div></div>`;setTimeout(()=>document.getElementById("loginPw")?.focus(),100);return}
+  if(S.loading){root.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--tx3)"><div style="text-align:center"><div style="width:36px;height:36px;border:3px solid var(--bg3);border-top:3px solid var(--brown);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div><p style="margin-top:12px">Laden...</p></div></div>';return}
+  if(S.viewT){renderTournamentDetail(root);return}
+  root.innerHTML=`<header class="header"><div class="header-top"><span class="logo">♛</span><div class="title-block"><h1 class="title">ChessMate</h1><span class="byline">by Sam Oosterlynck</span></div><div class="auth-area"><span class="role-badge role-${S.role}">${S.role==="host"?"Host":S.role==="importer"?"Importer":"Gast"}</span><button class="btn-sm" style="background:var(--bg2);color:var(--tx2);border:1px solid var(--cb);padding:5px 12px" onclick="doLogout()">Uitloggen</button></div></div><nav class="nav">${TABS.map((t,i)=>`<button class="tab${S.tab===i?" active":""}" onclick="setTab(${i})">${ICONS[i]} ${t}</button>`).join("")}</nav></header><main class="main" id="app"></main>`;
+  const app=document.getElementById("app");if(S.profileId){renderProfile(app);return}
+  [renderSpelers,renderToernooi,renderPartijen,renderAnalyse,renderInfo][S.tab](app)}
+async function doLogin(){const pw=document.getElementById("loginPw")?.value;if(pw===PW.host)S.role="host";else if(pw===PW.importer)S.role="importer";else if(pw===PW.visitor)S.role="visitor";else{document.getElementById("loginErr").textContent="Fout wachtwoord.";return}S.loading=true;R();await dbLoad();R()}
+function doLogout(){S.role=null;S.tab=0;S.profileId=null;S.activeT=null;S.viewT=null;R()}
+function setTab(i){S.tab=i;S.swapMode=null;S.profileId=null;R()}
 // PROFILE
-// ════════════════════════════════════════
 function showProfile(id){S.profileId=id;R()}
-function renderProfile(el){
-  const p=pById(S.profileId);if(!p){S.profileId=null;R();return}
-  const pg=S.games.filter(g=>g.white===p.id||g.black===p.id);let w=0,d=0,l=0;
-  pg.forEach(g=>{if((g.white===p.id&&g.result==="1-0")||(g.black===p.id&&g.result==="0-1"))w++;else if(g.result==="1/2-1/2")d++;else if(g.result&&g.result!=="bye")l++});
-  const tourns=S.tournaments.filter(t=>t.players?.includes(p.id)&&t.status==="finished");
-  const hist=p.rating_history||[];
-  el.innerHTML=`<button class="btn-outline" style="margin-bottom:16px" onclick="S.profileId=null;R()">← Terug</button>
-    <div class="card"><div class="profile-header"><div class="profile-avatar">${esc((p.name||"?")[0].toUpperCase())}</div><div style="flex:1"><h2 style="font-size:20px;margin-bottom:2px">${esc(p.name)}</h2><span style="font-size:14px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span></div><div style="text-align:right"><div class="stat-val" style="font-size:26px">${p.rating}</div><div class="stat-label">Elo</div></div></div>
-    <div class="stat-grid"><div class="stat-box"><div class="stat-val">${pg.length}</div><div class="stat-label">Partijen</div></div><div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div><div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div><div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div><div class="stat-box"><div class="stat-val">${pg.length?Math.round((w+d*.5)/pg.length*100):0}%</div><div class="stat-label">Score</div></div><div class="stat-box"><div class="stat-val">${tourns.length}</div><div class="stat-label">Toernooien</div></div></div></div>
-    ${hist.length>1?`<div class="card"><h3 class="card-title">Elo Verloop</h3>${renderChart(hist)}</div>`:""}
-    <div class="card"><h3 class="card-title">Partijen</h3>${pg.length===0?'<p class="empty">Nog geen partijen.</p>':""}${[...pg].reverse().slice(0,20).map(g=>{const isW=g.white===p.id,oId=isW?g.black:g.white;const r=g.result==="1/2-1/2"?"½":((isW&&g.result==="1-0")||(!isW&&g.result==="0-1"))?"W":"L";const rc=r==="W"?"var(--green)":r==="L"?"var(--red)":"var(--accent)";return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div><span style="color:${rc};font-weight:700;width:20px;display:inline-block">${r}</span> vs <strong>${esc(pN(oId))}</strong></div><div style="font-size:12px;color:var(--tx3)">${g.date||""}</div></div>`}).join("")}</div>`;
-}
-function renderChart(hist){const W=500,H=130,pad=30;const rs=hist.map(h=>h.rating);const mn=Math.min(...rs)-30,mx=Math.max(...rs)+30,rng=mx-mn||1;const pts=hist.map((h,i)=>({x:pad+(i/(hist.length-1||1))*(W-pad*2),y:H-pad-((h.rating-mn)/rng*(H-pad*2)),r:h.rating,e:h.event}));const path=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--bg3)"/><text x="${pad-4}" y="${H-pad+3}" text-anchor="end" font-size="10" fill="var(--tx3)">${mn+30}</text><text x="${pad-4}" y="${pad+4}" text-anchor="end" font-size="10" fill="var(--tx3)">${mx-30}</text><path d="${path}" fill="none" stroke="var(--brown)" stroke-width="2.5" stroke-linejoin="round"/>${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--brown)" stroke="var(--card)" stroke-width="2"><title>${p.r}</title></circle>`).join("")}</svg>`}
-
-// ════════════════════════════════════════
-// SPELERS TAB
-// ════════════════════════════════════════
-function renderSpelers(el){const sorted=[...S.players].sort((a,b)=>b.rating-a.rating);
-  el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Speler Toevoegen</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:150px" id="pNm" placeholder="Naam..." onkeydown="if(event.key==='Enter')addP()"><input class="input" style="width:110px" type="number" id="pRt" placeholder="Elo (opt.)" onkeydown="if(event.key==='Enter')addP()"><button class="btn" onclick="addP()">+ Toevoegen</button></div><p class="hint" style="margin-top:8px">Start: ${INIT_R}. K=40(&lt;30) → K=20(&lt;2400) → K=10(≥2400).</p></div>`:""}<div class="card"><h2 class="card-title">Ranglijst (${sorted.length})</h2><p class="hint" style="margin-top:-8px;margin-bottom:12px">Klik op een naam voor het profiel.</p>${sorted.length===0?'<p class="empty">Nog geen spelers.</p>':`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th class="tl">Naam</th><th>Elo</th><th>K</th><th>P</th>${isHost()?"<th></th>":""}</tr></thead><tbody>${sorted.map((p,i)=>{const k=getK(p.rating,p.games_played||0);const kc=k===40?"#c77b1a":k===20?"#3a7ca5":"#4a7c59";return`<tr><td>${i+1}</td><td class="tl"><span class="player-link" onclick="showProfile('${p.id}')" style="font-weight:600">${esc(p.name)}</span></td><td style="font-weight:700;font-size:16px;font-family:'Fira Code',monospace">${p.rating}</td><td><span class="badge" style="background:${kc}18;color:${kc}">K=${k}</span></td><td>${p.games_played||0}</td>${isHost()?`<td><button class="btn-danger" onclick="remP('${p.id}')">✕</button></td>`:""}</tr>`}).join("")}</tbody></table></div>`}</div>`}
-async function addP(){if(!isHost())return;const n=document.getElementById("pNm")?.value?.trim(),r=parseInt(document.getElementById("pRt")?.value)||INIT_R;if(!n)return;
-  const p={id:uid(),name:n,rating:r,games_played:0,joined:new Date().toISOString().split("T")[0],rating_history:[{rating:r,event:"Start"}]};
-  S.players.push(p);await dbUpsertPlayer(p);R()}
-async function remP(id){if(!isHost()||!confirm("Verwijderen?"))return;S.players=S.players.filter(p=>p.id!==id);await dbDeletePlayer(id);R()}
-
-// ════════════════════════════════════════
-// TOERNOOI TAB
-// ════════════════════════════════════════
+function renderProfile(el){const p=pById(S.profileId);if(!p){S.profileId=null;R();return}const pg=S.games.filter(g=>g.white===p.id||g.black===p.id);let w=0,d=0,l=0;pg.forEach(g=>{if((g.white===p.id&&g.result==="1-0")||(g.black===p.id&&g.result==="0-1"))w++;else if(g.result==="1/2-1/2")d++;else if(g.result&&g.result!=="bye")l++});const hist=p.rating_history||[];
+  el.innerHTML=`<button class="btn-outline" style="margin-bottom:16px" onclick="S.profileId=null;R()">← Terug</button><div class="card"><div class="profile-header"><div class="profile-avatar">${esc((p.name||"?")[0].toUpperCase())}</div><div style="flex:1"><h2 style="font-size:20px;margin-bottom:2px">${esc(p.name)}</h2><span style="font-size:14px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span></div><div style="text-align:right"><div class="stat-val" style="font-size:26px">${p.rating}</div><div class="stat-label">Elo</div></div></div><div class="stat-grid"><div class="stat-box"><div class="stat-val">${pg.length}</div><div class="stat-label">Partijen</div></div><div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div><div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div><div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div><div class="stat-box"><div class="stat-val">${pg.length?Math.round((w+d*.5)/pg.length*100):0}%</div><div class="stat-label">Score</div></div></div></div>${hist.length>1?`<div class="card"><h3 class="card-title">Elo Verloop</h3>${renderChart(hist)}</div>`:""}<div class="card"><h3 class="card-title">Partijen</h3>${pg.length===0?'<p class="empty">Geen partijen.</p>':""}${[...pg].reverse().slice(0,20).map(g=>{const isW=g.white===p.id,oId=isW?g.black:g.white;const r=g.result==="1/2-1/2"?"½":((isW&&g.result==="1-0")||(!isW&&g.result==="0-1"))?"W":"L";const rc=r==="W"?"var(--green)":r==="L"?"var(--red)":"var(--accent)";return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div><span style="color:${rc};font-weight:700;width:20px;display:inline-block">${r}</span> vs <strong>${esc(pN(oId))}</strong></div><div style="font-size:12px;color:var(--tx3)">${g.date||""}</div></div>`}).join("")}</div>`}
+function renderChart(hist){const W=500,H=130,pad=30;const rs=hist.map(h=>h.rating);const mn=Math.min(...rs)-30,mx=Math.max(...rs)+30,rng=mx-mn||1;const pts=hist.map((h,i)=>({x:pad+(i/(hist.length-1||1))*(W-pad*2),y:H-pad-((h.rating-mn)/rng*(H-pad*2)),r:h.rating,e:h.event}));const path=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--bg3)"/><path d="${path}" fill="none" stroke="var(--brown)" stroke-width="2.5" stroke-linejoin="round"/>${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--brown)" stroke="var(--card)" stroke-width="2"><title>${p.r}</title></circle>`).join("")}</svg>`}
+// TOURNAMENT DETAIL VIEW
+function viewTournament(id){S.viewT=id;R()}
+function renderTournamentDetail(root){const at=S.tournaments.find(t=>t.id===S.viewT);if(!at){S.viewT=null;R();return}const st=getStandings(at);const rounds=at.rounds||[];
+  root.innerHTML=`<header class="header"><div class="header-top"><span class="logo">♛</span><div class="title-block"><h1 class="title">ChessMate</h1><span class="byline">by Sam Oosterlynck</span></div></div></header><main class="main"><button class="btn-outline" style="margin-bottom:16px" onclick="S.viewT=null;R()">← Terug</button><div class="card"><h2 class="card-title">${esc(at.name)}</h2><p style="color:var(--tx2);margin-top:-8px;margin-bottom:14px">${esc(at.location||"")} · ${at.date} · ${(at.players||[]).length} spelers · ${rounds.length} rondes · ${at.status==="finished"?"Beëindigd":"Actief"}</p><h3 class="card-title">Eindstand</h3><table><thead><tr><th>#</th><th class="tl">Speler</th><th>Elo</th><th>Punten</th></tr></thead><tbody>${st.map((s,i)=>`<tr><td>${i+1}</td><td class="tl" style="font-weight:600">${esc(s.name)}</td><td style="font-family:'Fira Code',monospace">${s.rating}</td><td style="font-weight:700;font-size:16px">${s.score}</td></tr>`).join("")}</tbody></table></div>${rounds.map((round,ri)=>`<div class="card"><h3 class="card-title">Ronde ${ri+1}</h3><table><thead><tr><th>Bord</th><th class="tr">Wit</th><th>Resultaat</th><th class="tl">Zwart</th></tr></thead><tbody>${round.map(pair=>`<tr><td>${pair.board}</td><td class="tr" style="font-weight:${pair.result==="1-0"?700:400}">${esc(pN(pair.white))}</td><td>${pair.result==="bye"?'<span class="badge">BYE</span>':`<span class="badge" style="${pair.result?'background:var(--brown);color:#fff':''}">${pair.result||"—"}</span>`}</td><td class="tl" style="font-weight:${pair.result==="0-1"?700:400}">${pair.black?esc(pN(pair.black)):"—"}</td></tr>`).join("")}</tbody></table></div>`).join("")}</main>`}
+// SPELERS
+function renderSpelers(el){const sorted=[...S.players].sort((a,b)=>b.rating-a.rating);el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Speler Toevoegen</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:150px" id="pNm" placeholder="Naam..." onkeydown="if(event.key==='Enter')addP()"><input class="input" style="width:110px" type="number" id="pRt" placeholder="Elo (opt.)" onkeydown="if(event.key==='Enter')addP()"><button class="btn" onclick="addP()">+ Toevoegen</button></div></div>`:""}<div class="card"><h2 class="card-title">Ranglijst (${sorted.length})</h2>${sorted.length===0?'<p class="empty">Nog geen spelers.</p>':`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th class="tl">Naam</th><th>Elo</th><th>K</th><th>P</th>${isHost()?"<th></th>":""}</tr></thead><tbody>${sorted.map((p,i)=>{const k=getK(p.rating,p.games_played||0);const kc=k===40?"#c77b1a":k===20?"#3a7ca5":"#4a7c59";return`<tr><td>${i+1}</td><td class="tl"><span class="player-link" onclick="showProfile('${p.id}')" style="font-weight:600">${esc(p.name)}</span></td><td style="font-weight:700;font-size:16px;font-family:'Fira Code',monospace">${p.rating}</td><td><span class="badge" style="background:${kc}18;color:${kc}">K=${k}</span></td><td>${p.games_played||0}</td>${isHost()?`<td><button class="btn-danger" onclick="remP('${p.id}')">✕</button></td>`:""}</tr>`}).join("")}</tbody></table></div>`}</div>`}
+async function addP(){if(!isHost())return;const n=document.getElementById("pNm")?.value?.trim(),r=parseInt(document.getElementById("pRt")?.value)||INIT_R;if(!n)return;const p={id:uid(),name:n,rating:r,games_played:0,joined:new Date().toISOString().split("T")[0],rating_history:[{rating:r,event:"Start"}]};S.players.push(p);await dbUp(p);R()}
+async function remP(id){if(!isHost()||!confirm("Verwijderen?"))return;S.players=S.players.filter(p=>p.id!==id);await dbDelP(id);R()}
+// TOERNOOI
 function renderToernooi(el){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)renderTList(el);else renderActive(el,at)}
-function renderTList(el){const fin=S.tournaments.filter(t=>t.status==="finished");
-  el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Nieuw Toernooi</h2><div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:160px" id="tNm" placeholder="Naam..."><select class="input" id="tLc"><option>Oud Sint Jozef, Maldegem</option><option>Zonneheem, Eeklo</option><option value="__c">Andere...</option></select></div><p style="font-size:13px;color:var(--tx2);margin-bottom:6px">Deelnemers (<span id="selC">0</span>):</p><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="chips">${S.players.map(p=>`<button class="chip" data-id="${p.id}" onclick="togP('${p.id}')">${esc(p.name)} <span style="opacity:.5">(${p.rating})</span></button>`).join("")}${S.players.length>1?'<button class="chip" style="border-style:dashed" onclick="togAll()">Allemaal</button>':""}</div><button class="btn" onclick="createT()">⚔ Start Toernooi</button></div>`:`<div class="card"><p style="color:var(--tx2)">Log in als host om toernooien aan te maken.</p></div>`}${fin.length?`<div class="card"><h2 class="card-title">Geschiedenis</h2>${[...fin].reverse().map(t=>`<div class="list-item"><strong>${esc(t.name)}</strong> — ${esc(t.location||"")}<div class="hint">${t.date} · ${(t.rounds||[]).length}R · ${(t.players||[]).length} sp</div></div>`).join("")}</div>`:""}`
+function renderTList(el){const active=S.tournaments.filter(t=>t.status==="active");const fin=S.tournaments.filter(t=>t.status==="finished");
+  el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Nieuw Toernooi</h2><div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:160px" id="tNm" placeholder="Naam..."><select class="input" id="tLc"><option>Oud Sint Jozef, Maldegem</option><option>Huis Coppens, Eeklo</option><option value="__c">Andere...</option></select></div><p style="font-size:13px;color:var(--tx2);margin-bottom:6px">Deelnemers (<span id="selC">0</span>):</p><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="chips">${S.players.map(p=>`<button class="chip" data-id="${p.id}" onclick="togP('${p.id}')">${esc(p.name)} <span style="opacity:.5">(${p.rating})</span></button>`).join("")}${S.players.length>1?'<button class="chip" style="border-style:dashed" onclick="togAll()">Allemaal</button>':""}</div><button class="btn" onclick="createT()">⚔ Start Toernooi</button></div>`:`<div class="card"><p style="color:var(--tx2)">Log in als host om toernooien aan te maken.</p></div>`}${active.length?`<div class="card"><h2 class="card-title">Actieve Toernooien</h2>${active.map(t=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(t.name)}</strong> — ${esc(t.location||"")}<div class="hint">${t.date} · ${(t.rounds||[]).length}R · ${(t.players||[]).length} sp</div></div>${isHost()?`<button class="btn-sm" style="background:var(--brown);color:#fff;padding:5px 14px" onclick="S.activeT='${t.id}';R()">Beheren</button>`:""}</div>`).join("")}</div>`:""}${fin.length?`<div class="card"><h2 class="card-title">Geschiedenis</h2>${[...fin].reverse().map(t=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="viewTournament('${t.id}')"><div><strong>${esc(t.name)}</strong> — ${esc(t.location||"")}<div class="hint">${t.date} · ${(t.rounds||[]).length}R · ${(t.players||[]).length} sp</div></div><div style="display:flex;gap:6px">${isHost()?`<button class="btn-danger" onclick="event.stopPropagation();delT('${t.id}')">Verwijderen</button>`:""}<span style="color:var(--tx3);font-size:20px">→</span></div></div>`).join("")}</div>`:""}`
   window._sel=new Set();document.getElementById("tLc")?.addEventListener("change",function(){if(this.value==="__c"){const l=prompt("Locatie:");if(l){const o=document.createElement("option");o.value=l;o.textContent=l;this.insertBefore(o,this.lastElementChild);this.value=l}else this.value=this.options[0].value}})}
 window._sel=new Set();
 function togP(id){window._sel.has(id)?window._sel.delete(id):window._sel.add(id);updC()}
 function togAll(){window._sel.size===S.players.length?window._sel.clear():S.players.forEach(p=>window._sel.add(p.id));updC()}
 function updC(){document.querySelectorAll("#chips .chip[data-id]").forEach(c=>c.classList.toggle("active",window._sel.has(c.dataset.id)));const c=document.getElementById("selC");if(c)c.textContent=window._sel.size}
-async function createT(){if(!isHost())return;const n=document.getElementById("tNm")?.value?.trim(),l=document.getElementById("tLc")?.value;if(!n||window._sel.size<2){alert("Naam + minstens 2 spelers.");return}
-  const t={id:uid(),name:n,location:l==="__c"?"Andere":l,date:new Date().toISOString().split("T")[0],players:[...window._sel],rounds:[],status:"active"};
-  S.tournaments.push(t);S.activeT=t.id;await dbUpsertTournament(t);R()}
-
-function renderActive(el,at){
-  const st=getStandings(at),sm=S.swapMode;let smN="";if(sm){const pr=(at.rounds||[])[sm.ri]?.[sm.pi];if(pr)smN=pN(sm.side==="w"?pr.white:pr.black)}
-  const notIn=S.players.filter(p=>!(at.players||[]).includes(p.id));
-  const rounds=at.rounds||[];
-  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><h2 style="color:var(--brown);font-size:20px;font-family:'Playfair Display',serif">${esc(at.name)}</h2><p class="hint" style="margin-top:2px">${esc(at.location||"")} · ${at.date} · ${(at.players||[]).length} sp</p></div><div style="display:flex;gap:6px;flex-wrap:wrap">${isHost()?`<button class="btn" onclick="genR()">+ Ronde</button>${notIn.length?`<button class="btn" style="background:var(--accent)" onclick="showAddMid()">+ Speler</button>`:""}<button class="btn" style="background:var(--green)" onclick="finishT()">✓ Beëindigen</button>`:""}<button class="btn-outline" onclick="S.activeT=null;S.swapMode=null;R()">← Terug</button></div></div>
-  ${sm?`<div class="swap-banner">⚡ <strong>${esc(smN)}</strong> geselecteerd — klik op andere speler om te wisselen <button class="btn-sm" style="background:var(--accent);color:#fff;margin-left:6px" onclick="S.swapMode=null;R()">Annuleren</button></div>`:""}
-  <div class="card"><h3 class="card-title">Stand</h3><table><thead><tr><th>#</th><th class="tl">Speler</th><th>Elo</th><th>Punten</th></tr></thead><tbody>${st.map((s,i)=>`<tr><td>${i+1}</td><td class="tl" style="font-weight:600"><span class="player-link" onclick="showProfile('${s.id}')">${esc(s.name)}</span></td><td style="font-family:'Fira Code',monospace">${s.rating}</td><td style="font-weight:700;font-size:16px">${s.score}</td></tr>`).join("")}</tbody></table></div>
-  ${[...rounds].map((_,idx)=>rounds.length-1-idx).map(ri=>{const round=rounds[ri];const swRi=sm?sm.ri:null;return`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="card-title" style="margin:0;border:none;padding:0">Ronde ${ri+1}${isHost()&&!sm?' <span style="font-size:11px;font-weight:400;color:var(--tx3);font-family:Source Sans 3,sans-serif"> — klik naam om te wisselen</span>':""}</h3>${isHost()?`<button class="btn-danger" onclick="delR(${ri})">Verwijderen</button>`:""}</div><div style="overflow-x:auto"><table><thead><tr><th style="width:50px">Bord</th><th class="tr">Wit</th>${isHost()?'<th style="width:36px"></th>':""}<th style="min-width:130px">Resultaat</th><th class="tl">Zwart</th></tr></thead><tbody>${round.map((pair,pi)=>{const hw=sm&&sm.ri===ri&&sm.pi===pi&&sm.side==="w",hb=sm&&sm.ri===ri&&sm.pi===pi&&sm.side==="b";return`<tr><td>${pair.board}</td><td class="tr"><span class="${hw?"swap-hl":""}" style="cursor:${pair.black&&isHost()?"pointer":"default"};padding:3px 7px;display:inline-block;border-radius:4px;border:1.5px solid ${hw?"var(--gold)":swRi===ri&&isHost()&&pair.black?"var(--cb)":"transparent"};background:${hw?"var(--goldl)":swRi===ri&&isHost()&&pair.black?"var(--bg2)":"transparent"}" onclick="${pair.black&&isHost()?`doSw(${ri},${pi},'w')`:""}" title="${isHost()&&pair.black?"Klik om te wisselen":""}"><span style="font-weight:${pair.result==="1-0"?700:400}">${esc(pN(pair.white))}</span> <span style="color:var(--tx3);font-size:11px">(${pR(pair.white)})</span></span></td>${isHost()?`<td>${pair.black?`<button class="btn-sm" style="background:var(--bg2);border:1px solid var(--cb);font-size:14px;padding:2px 6px" onclick="flipC(${ri},${pi})">⇄</button>`:""}</td>`:""}<td>${pair.result==="bye"?'<span class="badge">BYE (+1)</span>':pair.result?`<div style="display:flex;align-items:center;gap:6px;justify-content:center"><span class="badge" style="background:var(--brown);color:#fff;font-size:14px">${pair.result}</span>${isHost()?`<button class="btn-sm" style="background:transparent;color:var(--tx3);text-decoration:underline;font-size:11px" onclick="clrR(${ri},${pi})">reset</button>`:""}</div>`:isHost()?`<div style="display:flex;gap:4px;justify-content:center"><button class="res-btn" onclick="setR(${ri},${pi},'1-0')">1-0</button><button class="res-btn" onclick="setR(${ri},${pi},'1/2-1/2')">½-½</button><button class="res-btn" onclick="setR(${ri},${pi},'0-1')">0-1</button></div>`:'<span style="color:var(--tx3)">—</span>'}</td><td class="tl">${pair.black?`<span class="${hb?"swap-hl":""}" style="cursor:${isHost()?"pointer":"default"};padding:3px 7px;display:inline-block;border-radius:4px;border:1.5px solid ${hb?"var(--gold)":swRi===ri&&isHost()?"var(--cb)":"transparent"};background:${hb?"var(--goldl)":swRi===ri&&isHost()?"var(--bg2)":"transparent"}" onclick="${isHost()?`doSw(${ri},${pi},'b')`:""}" title="${isHost()?"Klik om te wisselen":""}"><span style="font-weight:${pair.result==="0-1"?700:400}">${esc(pN(pair.black))}</span> <span style="color:var(--tx3);font-size:11px">(${pR(pair.black)})</span></span>`:"—"}</td></tr>`}).join("")}</tbody></table></div></div>`}).join("")}`}
-
-function getStandings(at){const sc={};(at.players||[]).forEach(id=>{sc[id]=0});(at.rounds||[]).forEach(r=>r.forEach(({white,black,result})=>{if(result==="1-0")sc[white]=(sc[white]||0)+1;else if(result==="0-1")sc[black]=(sc[black]||0)+1;else if(result==="1/2-1/2"){sc[white]=(sc[white]||0)+.5;sc[black]=(sc[black]||0)+.5}else if(result==="bye")sc[white]=(sc[white]||0)+1}));return Object.entries(sc).sort((a,b)=>b[1]-a[1]).map(([id,s])=>({id,name:pN(id),rating:pR(id),score:s}))}
-
-async function genR(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;if(!at.rounds)at.rounds=[];
-  at.rounds.push(swissPair(S.players.filter(p=>(at.players||[]).includes(p.id)),at.rounds));
-  await dbUpsertTournament(at);R()}
-async function delR(ri){if(!isHost()||!confirm(`Ronde ${ri+1} verwijderen?`))return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.rounds.splice(ri,1);await dbUpsertTournament(at);R()}
-async function doSw(ri,pi,side){if(!isHost())return;const sm=S.swapMode;if(!sm){S.swapMode={ri,pi,side};R();return}if(sm.ri!==ri){S.swapMode=null;R();return}
-  const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const f=at.rounds[sm.ri][sm.pi],to=at.rounds[ri][pi];const fId=sm.side==="w"?f.white:f.black,tId=side==="w"?to.white:to.black;if(sm.side==="w")f.white=tId;else f.black=tId;if(side==="w")to.white=fId;else to.black=fId;S.swapMode=null;await dbUpsertTournament(at);R()}
-async function flipC(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const p=at.rounds[ri][pi];if(!p.black)return;[p.white,p.black]=[p.black,p.white];await dbUpsertTournament(at);R()}
-async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.rounds[ri][pi].result=result;const pair=at.rounds[ri][pi];
-  if(pair.black&&result!=="bye"){const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament:at.name,round:ri+1,tournament_id:at.id};S.games.push(g);await dbInsertGame(g)}
-  await dbUpsertTournament(at);R()}
-async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];
-  const gm=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);
-  if(gm){S.games=S.games.filter(g=>g.id!==gm.id);await dbDeleteGame(gm.id)}
-  pair.result=null;await dbUpsertTournament(at);R()}
-async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;
-  const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});
-  allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});
-  for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const old=p.rating;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[{rating:old,event:"Start"}];p.rating_history.push({rating:p.rating,event:at.name});await dbUpsertPlayer(p)}
-  at.status="finished";S.activeT=null;await dbUpsertTournament(at);R()}
-function showAddMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const ni=S.players.filter(p=>!(at.players||[]).includes(p.id));if(!ni.length){alert("Alle spelers zitten al in het toernooi.");return}showModal(`<h2 style="font-size:18px">Speler Toevoegen</h2>${ni.map(p=>`<button class="chip" style="margin:4px" onclick="addMid('${p.id}')">${esc(p.name)} (${p.rating})</button>`).join("")}<div style="margin-top:16px;text-align:right"><button class="btn-outline" onclick="closeModal()">Sluiten</button></div>`)}
-async function addMid(pid){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.players.push(pid);closeModal();await dbUpsertTournament(at);R()}
-
-// ════════════════════════════════════════
-// PARTIJEN TAB
-// ════════════════════════════════════════
+async function createT(){if(!isHost())return;const n=document.getElementById("tNm")?.value?.trim(),l=document.getElementById("tLc")?.value;if(!n||window._sel.size<2){alert("Naam + minstens 2 spelers.");return}const t={id:uid(),name:n,location:l==="__c"?"Andere":l,date:new Date().toISOString().split("T")[0],players:[...window._sel],rounds:[],status:"active"};S.tournaments.push(t);S.activeT=t.id;await dbUT(t);R()}
+async function delT(id){if(!isHost()||!confirm("Toernooi verwijderen?"))return;S.tournaments=S.tournaments.filter(t=>t.id!==id);await dbDelT(id);R()}
+function renderActive(el,at){const st=getStandings(at),sm=S.swapMode;let smN="";if(sm){const pr=(at.rounds||[])[sm.ri]?.[sm.pi];if(pr)smN=pN(sm.side==="w"?pr.white:pr.black)}const notIn=S.players.filter(p=>!(at.players||[]).includes(p.id));const rounds=at.rounds||[];
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><h2 style="color:var(--brown);font-size:20px;font-family:'Playfair Display',serif">${esc(at.name)}</h2><p class="hint" style="margin-top:2px">${esc(at.location||"")} · ${at.date} · ${(at.players||[]).length} sp</p></div><div style="display:flex;gap:6px;flex-wrap:wrap">${isHost()?`<button class="btn" onclick="genR()">+ Ronde</button>${notIn.length?`<button class="btn" style="background:var(--accent)" onclick="showAddMid()">+ Speler</button>`:""}<button class="btn" style="background:var(--green)" onclick="finishT()">✓ Beëindigen</button>`:""}<button class="btn-outline" onclick="S.activeT=null;S.swapMode=null;R()">← Terug</button></div></div>${sm?`<div class="swap-banner">⚡ <strong>${esc(smN)}</strong> geselecteerd — klik op andere speler om te wisselen <button class="btn-sm" style="background:var(--accent);color:#fff;margin-left:6px" onclick="S.swapMode=null;R()">Annuleren</button></div>`:""}<div class="card"><h3 class="card-title">Stand</h3><table><thead><tr><th>#</th><th class="tl">Speler</th><th>Elo</th><th>Punten</th></tr></thead><tbody>${st.map((s,i)=>`<tr><td>${i+1}</td><td class="tl" style="font-weight:600">${esc(s.name)}</td><td style="font-family:'Fira Code',monospace">${s.rating}</td><td style="font-weight:700;font-size:16px">${s.score}</td></tr>`).join("")}</tbody></table></div>${[...rounds].map((_,idx)=>rounds.length-1-idx).map(ri=>{const round=rounds[ri];const swRi=sm?sm.ri:null;return`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 class="card-title" style="margin:0;border:none;padding:0">Ronde ${ri+1}</h3>${isHost()?`<button class="btn-danger" onclick="delR(${ri})">Verwijderen</button>`:""}</div><div style="overflow-x:auto"><table><thead><tr><th style="width:50px">Bord</th><th class="tr">Wit</th><th style="min-width:130px">Resultaat</th><th class="tl">Zwart</th></tr></thead><tbody>${round.map((pair,pi)=>{const hw=sm&&sm.ri===ri&&sm.pi===pi&&sm.side==="w",hb=sm&&sm.ri===ri&&sm.pi===pi&&sm.side==="b";return`<tr><td>${pair.board}</td><td class="tr"><span class="${hw?"swap-pick selected":isHost()&&pair.black&&swRi===ri?"swap-pick":isHost()&&pair.black?"swap-pick":""}" onclick="${pair.black&&isHost()?`doSw(${ri},${pi},'w')`:""}">${esc(pN(pair.white))} <span style="color:var(--tx3);font-size:11px">(${pR(pair.white)})</span></span></td><td>${pair.result==="bye"?'<span class="badge">BYE (+1)</span>':pair.result?`<div style="display:flex;align-items:center;gap:6px;justify-content:center"><span class="badge" style="background:var(--brown);color:#fff;font-size:14px">${pair.result}</span>${isHost()?`<button class="btn-sm" style="background:transparent;color:var(--tx3);text-decoration:underline;font-size:11px" onclick="clrR(${ri},${pi})">reset</button>`:""}</div>`:isHost()?`<div style="display:flex;gap:4px;justify-content:center"><button class="res-btn" onclick="setR(${ri},${pi},'1-0')">1-0</button><button class="res-btn" onclick="setR(${ri},${pi},'1/2-1/2')">½-½</button><button class="res-btn" onclick="setR(${ri},${pi},'0-1')">0-1</button></div>`:'<span style="color:var(--tx3)">—</span>'}</td><td class="tl">${pair.black?`<span class="${hb?"swap-pick selected":isHost()&&swRi===ri?"swap-pick":isHost()?"swap-pick":""}" onclick="${isHost()?`doSw(${ri},${pi},'b')`:""}">${esc(pN(pair.black))} <span style="color:var(--tx3);font-size:11px">(${pR(pair.black)})</span></span>`:"—"}</td></tr>`}).join("")}</tbody></table></div></div>`}).join("")}`}
+async function genR(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;if(!at.rounds)at.rounds=[];at.rounds.push(swissPair(S.players.filter(p=>(at.players||[]).includes(p.id)),at.rounds));await dbUT(at);R()}
+async function delR(ri){if(!isHost()||!confirm(`Ronde ${ri+1} verwijderen?`))return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.rounds.splice(ri,1);await dbUT(at);R()}
+async function doSw(ri,pi,side){if(!isHost())return;const sm=S.swapMode;if(!sm){S.swapMode={ri,pi,side};R();return}if(sm.ri!==ri){S.swapMode=null;R();return}const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const f=at.rounds[sm.ri][sm.pi],to=at.rounds[ri][pi];const fId=sm.side==="w"?f.white:f.black,tId=side==="w"?to.white:to.black;if(sm.side==="w")f.white=tId;else f.black=tId;if(side==="w")to.white=fId;else to.black=fId;S.swapMode=null;await dbUT(at);R()}
+async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.rounds[ri][pi].result=result;const pair=at.rounds[ri][pi];if(pair.black&&result!=="bye"){const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament:at.name,round:ri+1,tournament_id:at.id};S.games.push(g);await dbIG(g)}await dbUT(at);R()}
+async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];const gm=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);if(gm){S.games=S.games.filter(g=>g.id!==gm.id);await dbDG(gm.id)}pair.result=null;await dbUT(at);R()}
+async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";S.activeT=null;await dbUT(at);R()}
+function showAddMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const ni=S.players.filter(p=>!(at.players||[]).includes(p.id));if(!ni.length){alert("Iedereen zit er al in.");return}showModal(`<h2 style="font-size:18px">Speler Toevoegen</h2>${ni.map(p=>`<button class="chip" style="margin:4px" onclick="addMid('${p.id}')">${esc(p.name)} (${p.rating})</button>`).join("")}<div style="margin-top:16px;text-align:right"><button class="btn-outline" onclick="closeModal()">Sluiten</button></div>`)}
+async function addMid(pid){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.players.push(pid);closeModal();await dbUT(at);R()}
+// PARTIJEN — only link, check result match, 🔍 button
 function renderPartijen(el){const nm=id=>pN(id),rc=r=>r==="1-0"?"var(--green)":r==="0-1"?"var(--red)":"var(--accent)";const unlinked=S.games.filter(g=>!g.pgn&&g.tournament_id);
-  el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="card-title" style="margin:0;border:none;padding:0">Partijen (${S.games.length})</h2>${isImp()?`<button class="btn" onclick="toggleImp()">📥 PGN Importeren & Koppelen</button>`:""}</div><div id="impSec" style="display:none;margin-top:14px"><textarea class="textarea" rows="6" id="pgnIn" placeholder="Plak PGN vanuit Lichess Studies, chess.com..."></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="doParse()">Parsen</button></div><div id="parsed" style="margin-top:10px"></div>${unlinked.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg3)"><h3 class="card-title">Koppel aan gespeelde partij</h3><p class="hint" style="margin-bottom:8px">Klik partij, dan "Koppelen" bij de PGN.</p><div id="linkTgt">${unlinked.map(g=>`<div class="list-item" style="cursor:pointer" onclick="selLink('${g.id}')" id="lt_${g.id}"><strong>${esc(nm(g.white))}</strong> vs <strong>${esc(nm(g.black))}</strong> <span class="badge">${g.result}</span> <span style="color:var(--tx3);font-size:12px">${g.tournament||""} R${g.round||""}</span></div>`).join("")}</div></div>`:""}</div></div>${S.games.length>0?`<div class="card"><h3 class="card-title">Recente Partijen</h3>${[...S.games].reverse().slice(0,40).map(g=>`<div class="list-item"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:${g.result==="1-0"?700:400}">${esc(nm(g.white))}</span><span class="badge" style="color:${rc(g.result)}">${g.result}</span><span style="font-weight:${g.result==="0-1"?700:400}">${esc(nm(g.black))}</span>${g.pgn?'<span class="badge" style="background:var(--gl);color:var(--green)">PGN</span>':""}</div><div style="font-size:12px;color:var(--tx3);margin-top:2px">${g.date||""}${g.tournament?` · ${esc(g.tournament)}`:""}</div></div>`).join("")}</div>`:""}`}
+  el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="card-title" style="margin:0;border:none;padding:0">Partijen (${S.games.length})</h2>${isImp()?`<button class="btn" onclick="toggleImp()">📥 PGN Koppelen</button>`:""}</div><div id="impSec" style="display:none;margin-top:14px"><textarea class="textarea" rows="6" id="pgnIn" placeholder="Plak PGN vanuit Lichess Studies, chess.com..."></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="doParse()">Parsen</button></div><div id="parsed" style="margin-top:10px"></div>${unlinked.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg3)"><h3 class="card-title">Koppel aan gespeelde partij</h3><p class="hint" style="margin-bottom:8px">Klik partij, dan "Koppelen".</p><div id="linkTgt">${unlinked.map(g=>`<div class="list-item" style="cursor:pointer" onclick="selLink('${g.id}')" id="lt_${g.id}"><strong>${esc(nm(g.white))}</strong> vs <strong>${esc(nm(g.black))}</strong> <span class="badge">${g.result}</span> <span style="color:var(--tx3);font-size:12px">${g.tournament||""} R${g.round||""}</span></div>`).join("")}</div></div>`:'<p class="hint" style="margin-top:12px">Alle partijen hebben al een PGN, of er zijn nog geen toernooipartijen.</p>'}</div></div>${S.games.length>0?`<div class="card"><h3 class="card-title">Recente Partijen</h3>${[...S.games].reverse().slice(0,40).map(g=>`<div class="list-item"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:${g.result==="1-0"?700:400}">${esc(nm(g.white))}</span><span class="badge" style="color:${rc(g.result)}">${g.result}</span><span style="font-weight:${g.result==="0-1"?700:400}">${esc(nm(g.black))}</span>${g.pgn?`<button class="btn-sm" style="background:var(--gl);color:var(--green);border:1px solid var(--green);display:flex;align-items:center;gap:3px" onclick="openAnalyse('${g.id}')">🔍 PGN</button>`:""}${isHost()?`<button class="btn-danger" onclick="delGame('${g.id}')" title="Verwijderen">✕</button>`:""}</div><div style="font-size:12px;color:var(--tx3);margin-top:2px">${g.date||""}${g.tournament?` · ${esc(g.tournament)}`:""}</div></div>`).join("")}</div>`:""}`}
+function openAnalyse(gid){const g=S.games.find(x=>x.id===gid);if(!g?.pgn)return;S.tab=3;window._autoLoadPgn=g.pgn;R()}
+async function delGame(id){if(!isHost()||!confirm("Partij verwijderen?"))return;S.games=S.games.filter(g=>g.id!==id);await dbDG(id);R()}
 function toggleImp(){const s=document.getElementById("impSec");if(s)s.style.display=s.style.display==="none"?"block":"none"}
 window._parsed=[];window._linkTgt=null;
-function doParse(){const pgn=document.getElementById("pgnIn")?.value;if(!pgn?.trim())return;window._parsed=parsePGN(pgn);const d=document.getElementById("parsed");if(!d)return;d.innerHTML=window._parsed.map((g,i)=>`<div class="list-item" style="display:flex;align-items:center;gap:8px"><strong>${esc(g.headers.White||"?")}</strong> vs <strong>${esc(g.headers.Black||"?")}</strong><span class="badge">${g.result}</span><span style="color:var(--tx3);font-size:12px">${g.moves.length} zetten</span>${window._linkTgt?`<button class="btn-sm" style="background:var(--green);color:#fff" onclick="linkPGN(${i})">Koppelen</button>`:`<button class="btn-sm" style="background:var(--brown);color:#fff" onclick="saveNew(${i})">Opslaan</button>`}</div>`).join("")}
+function doParse(){const pgn=document.getElementById("pgnIn")?.value;if(!pgn?.trim())return;window._parsed=parsePGN(pgn);const d=document.getElementById("parsed");if(!d)return;d.innerHTML=window._parsed.map((g,i)=>`<div class="list-item" style="display:flex;align-items:center;gap:8px"><strong>${esc(g.headers.White||"?")}</strong> vs <strong>${esc(g.headers.Black||"?")}</strong><span class="badge">${g.result}</span><span style="color:var(--tx3);font-size:12px">${g.moves.length} zetten</span>${window._linkTgt?`<button class="btn-sm" style="background:var(--green);color:#fff" onclick="linkPGN(${i})">Koppelen</button>`:""}</div>`).join("")}
 function selLink(gid){window._linkTgt=gid;document.querySelectorAll("#linkTgt .list-item").forEach(el=>{el.style.background=el.id===`lt_${gid}`?"var(--goldl)":"transparent"});doParse()}
-async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;g.pgn=window._parsed[idx].raw;g.moves=window._parsed[idx].moves;window._linkTgt=null;await dbUpdateGame(g.id,{pgn:g.pgn,moves:g.moves});R()}
-async function saveNew(idx){if(!window._parsed[idx])return;const g=window._parsed[idx];const ng={id:uid(),white:g.headers.White||"?",black:g.headers.Black||"?",result:g.result,date:g.headers.Date||new Date().toISOString().split("T")[0],pgn:g.raw,moves:g.moves};S.games.push(ng);await dbInsertGame(ng);R()}
-
-// ════════════════════════════════════════
-// ANALYSE TAB
-// ════════════════════════════════════════
+async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;const pgn=window._parsed[idx];
+  // Check result match
+  if(pgn.result&&pgn.result!=="*"&&g.result&&pgn.result!==g.result){if(!confirm(`Let op: PGN resultaat is ${pgn.result} maar toernooiresultaat is ${g.result}. Toch koppelen?`))return}
+  g.pgn=pgn.raw;g.moves=pgn.moves;window._linkTgt=null;await dbUG(g.id,{pgn:g.pgn,moves:g.moves});R()}
+// ANALYSE — full game analysis in one go
 let chess=null,anMoves=[],anIdx=-1,sfW=null,sfReady=false,sfEval=null;
 const PC={K:"♔",Q:"♕",R:"♖",B:"♗",N:"♘",P:"♙",k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"};
-function renderAnalyse(el){const pgnG=S.games.filter(g=>g.pgn);
-  el.innerHTML=`<div class="card"><h2 class="card-title">Partij Analyse</h2><div style="display:flex;gap:16px;flex-wrap:wrap"><div style="flex:1;min-width:240px"><textarea class="textarea" rows="5" id="anPgn" placeholder="Plak PGN..."></textarea><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" onclick="loadAn()">Laden</button><button class="btn" id="sfBtn" style="background:${sfReady?"var(--green)":"var(--tx3)"}" onclick="loadSF()">${sfReady?"✓ Stockfish":"🔧 Stockfish"}</button></div>${pgnG.length?`<div style="margin-top:12px"><p style="font-size:13px;color:var(--tx2);margin-bottom:6px">Opgeslagen:</p><div style="display:flex;flex-wrap:wrap;gap:4px">${pgnG.slice(-8).map(g=>`<button class="chip" style="font-size:12px" onclick="loadSav('${g.id}')">${esc(typeof g.white==="string"?g.white:"?")} vs ${esc(typeof g.black==="string"?g.black:"?")}</button>`).join("")}</div></div>`:""}<div id="mlWrap" style="margin-top:14px"></div></div><div><div style="display:flex;gap:6px;align-items:stretch"><div class="eval-bar-v" id="evalBarV" style="height:340px"><div class="eval-white" id="evalW" style="height:50%"></div><div class="eval-label" id="evalLbl" style="top:4px;color:#ddd">0.0</div></div><div class="board-wrap" id="boardW"></div></div><div class="nav-btns" style="display:flex;gap:4px;margin-top:8px;justify-content:center"><button onclick="anGo(0)">⏮</button><button onclick="anGo(anIdx-1)">◀</button><button onclick="anGo(anIdx+1)">▶</button><button onclick="anGo(anMoves.length-1)">⏭</button></div><div id="evalTxt" style="margin-top:6px;text-align:center;font-family:'Fira Code',monospace;font-size:13px;color:var(--tx2);min-height:20px"></div></div></div></div>`;
-  if(!chess)chess=new Chess();drawBoard()}
-function drawBoard(){if(!chess)return;const sz=340,sq=sz/8,bd=chess.board();let svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">`;for(let r=0;r<8;r++)for(let c=0;c<8;c++)svg+=`<rect x="${c*sq}" y="${r*sq}" width="${sq}" height="${sq}" fill="${(r+c)%2===0?"#e8d5a8":"#8b7355"}"/>`;if(anIdx>=0&&anMoves[anIdx]){const m=anMoves[anIdx],ff="abcdefgh".indexOf(m.from[0]),fr=8-parseInt(m.from[1]),tf="abcdefgh".indexOf(m.to[0]),tr=8-parseInt(m.to[1]);svg+=`<rect x="${ff*sq}" y="${fr*sq}" width="${sq}" height="${sq}" fill="rgba(180,160,60,.35)"/><rect x="${tf*sq}" y="${tr*sq}" width="${sq}" height="${sq}" fill="rgba(180,160,60,.45)"/>`}for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(p)svg+=`<text x="${c*sq+sq/2}" y="${r*sq+sq/2+2}" text-anchor="middle" dominant-baseline="central" font-size="${sq*.78}" style="user-select:none">${p.color==="w"?PC[p.type.toUpperCase()]:PC[p.type]}</text>`}for(let i=0;i<8;i++){svg+=`<text x="${i*sq+sq-3}" y="${sz-3}" text-anchor="end" font-size="9" fill="${i%2===0?"#8b7355":"#e8d5a8"}" style="font-family:monospace">${"abcdefgh"[i]}</text>`;svg+=`<text x="3" y="${i*sq+12}" font-size="9" fill="${i%2===0?"#e8d5a8":"#8b7355"}" style="font-family:monospace">${8-i}</text>`}svg+=`</svg>`;const bw=document.getElementById("boardW");if(bw)bw.innerHTML=svg}
-function loadAn(){const pgn=document.getElementById("anPgn")?.value;if(!pgn?.trim())return;chess=new Chess();anMoves=[];anIdx=-1;const p=parsePGN(pgn);if(!p.length)return;const tc=new Chess();p[0].moves.forEach(m=>{const mv=tc.move(m);if(mv)anMoves.push(mv)});chess=new Chess();drawBoard();renderML()}
-function loadSav(id){const g=S.games.find(x=>x.id===id);if(!g?.pgn)return;chess=new Chess();anMoves=[];anIdx=-1;const p=parsePGN(g.pgn);if(!p.length)return;const tc=new Chess();p[0].moves.forEach(m=>{const mv=tc.move(m);if(mv)anMoves.push(mv)});chess=new Chess();drawBoard();renderML()}
-function anGo(idx){idx=Math.max(-1,Math.min(idx,anMoves.length-1));chess=new Chess();for(let i=0;i<=idx;i++)chess.move(anMoves[i].san);anIdx=idx;drawBoard();renderML();if(sfReady)analyzePos(chess.fen())}
-function renderML(){const w=document.getElementById("mlWrap");if(!w)return;let h='<div class="move-list">';for(let i=0;i<anMoves.length;i+=2){h+=`<span class="mn">${Math.floor(i/2)+1}.</span><span class="mv${i===anIdx?" active":""}" onclick="anGo(${i})">${anMoves[i].san}</span> `;if(i+1<anMoves.length)h+=`<span class="mv${i+1===anIdx?" active":""}" onclick="anGo(${i+1})">${anMoves[i+1].san}</span> `;if(i%8>=6)h+="<br>"}h+="</div>";w.innerHTML=h}
+function renderAnalyse(el){
+  el.innerHTML=`<div class="card"><h2 class="card-title">Partij Analyse</h2><div style="display:flex;gap:16px;flex-wrap:wrap"><div style="flex:1;min-width:240px"><textarea class="textarea" rows="5" id="anPgn" placeholder="Plak PGN..."></textarea><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" onclick="loadAn()">Laden</button><button class="btn" id="sfBtn" style="background:${sfReady?"var(--green)":"var(--tx3)"}" onclick="loadSF()">${sfReady?"✓ Stockfish":"🔧 Stockfish"}</button>${anMoves.length&&sfReady&&!S.analyzing?`<button class="btn" style="background:var(--accent)" onclick="analyzeAll()">⚡ Analyseer alles</button>`:""}</div><div id="mlWrap" style="margin-top:14px"></div></div><div><div style="display:flex;gap:6px;align-items:stretch"><div class="eval-bar-v" id="evalBarV" style="height:340px"><div class="eval-white" id="evalW" style="height:50%"></div><div class="eval-label" id="evalLbl" style="top:4px;color:#ddd">0.0</div></div><div class="board-wrap" id="boardW">${S.analyzing?'<div class="board-overlay"><div class="spinner"></div><p style="margin-top:10px;color:var(--brown);font-weight:600;font-size:14px">Analyseren...</p></div>':""}</div></div><div class="nav-btns" style="display:flex;gap:4px;margin-top:8px;justify-content:center"><button onclick="anGo(0)" class="${S.analyzing?"disabled":""}">⏮</button><button onclick="anGo(anIdx-1)" class="${S.analyzing?"disabled":""}">◀</button><button onclick="anGo(anIdx+1)" class="${S.analyzing?"disabled":""}">▶</button><button onclick="anGo(anMoves.length-1)" class="${S.analyzing?"disabled":""}">⏭</button></div><div id="evalTxt" style="margin-top:6px;text-align:center;font-family:'Fira Code',monospace;font-size:13px;color:var(--tx2);min-height:20px">${S.analyzing?"Analyseren...":""}</div></div></div></div>`;
+  if(!chess)chess=new Chess();drawBoard();renderML();
+  if(window._autoLoadPgn){const pgn=window._autoLoadPgn;window._autoLoadPgn=null;document.getElementById("anPgn").value=pgn;loadAn()}}
+function drawBoard(){if(!chess)return;const sz=340,sq=sz/8,bd=chess.board();let svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">`;for(let r=0;r<8;r++)for(let c=0;c<8;c++)svg+=`<rect x="${c*sq}" y="${r*sq}" width="${sq}" height="${sq}" fill="${(r+c)%2===0?"#e8d5a8":"#8b7355"}"/>`;if(anIdx>=0&&anMoves[anIdx]){const m=anMoves[anIdx],ff="abcdefgh".indexOf(m.from[0]),fr=8-parseInt(m.from[1]),tf="abcdefgh".indexOf(m.to[0]),tr=8-parseInt(m.to[1]);svg+=`<rect x="${ff*sq}" y="${fr*sq}" width="${sq}" height="${sq}" fill="rgba(180,160,60,.35)"/><rect x="${tf*sq}" y="${tr*sq}" width="${sq}" height="${sq}" fill="rgba(180,160,60,.45)"/>`}for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=bd[r][c];if(p)svg+=`<text x="${c*sq+sq/2}" y="${r*sq+sq/2+2}" text-anchor="middle" dominant-baseline="central" font-size="${sq*.78}" style="user-select:none">${p.color==="w"?PC[p.type.toUpperCase()]:PC[p.type]}</text>`}for(let i=0;i<8;i++){svg+=`<text x="${i*sq+sq-3}" y="${sz-3}" text-anchor="end" font-size="9" fill="${i%2===0?"#8b7355":"#e8d5a8"}" style="font-family:monospace">${"abcdefgh"[i]}</text>`;svg+=`<text x="3" y="${i*sq+12}" font-size="9" fill="${i%2===0?"#e8d5a8":"#8b7355"}" style="font-family:monospace">${8-i}</text>`}svg+=`</svg>`;const bw=document.getElementById("boardW");if(bw){const overlay=bw.querySelector(".board-overlay");bw.innerHTML=svg;if(S.analyzing)bw.insertAdjacentHTML("beforeend",'<div class="board-overlay"><div class="spinner"></div><p style="margin-top:10px;color:var(--brown);font-weight:600;font-size:14px">Analyseren...</p></div>')}}
+function loadAn(){const pgn=document.getElementById("anPgn")?.value;if(!pgn?.trim())return;chess=new Chess();anMoves=[];anIdx=-1;S.anEvals=[];const p=parsePGN(pgn);if(!p.length)return;const tc=new Chess();p[0].moves.forEach(m=>{const mv=tc.move(m);if(mv)anMoves.push(mv)});chess=new Chess();drawBoard();renderML();R()}
+function anGo(idx){if(S.analyzing)return;idx=Math.max(-1,Math.min(idx,anMoves.length-1));chess=new Chess();for(let i=0;i<=idx;i++)chess.move(anMoves[i].san);anIdx=idx;drawBoard();renderML();
+  // Show stored eval
+  if(S.anEvals[idx+1]!==undefined){const ev=S.anEvals[idx+1];updEvalDisplay(ev);}}
+function renderML(){const w=document.getElementById("mlWrap");if(!w)return;let h='<div class="move-list">';for(let i=0;i<anMoves.length;i+=2){h+=`<span class="mn">${Math.floor(i/2)+1}.</span><span class="mv${i===anIdx?" active":""}" onclick="anGo(${i})">${anMoves[i].san}${evalBadge(i)}</span> `;if(i+1<anMoves.length)h+=`<span class="mv${i+1===anIdx?" active":""}" onclick="anGo(${i+1})">${anMoves[i+1].san}${evalBadge(i+1)}</span> `}h+="</div>";w.innerHTML=h}
+function evalBadge(i){const ev=S.anEvals[i+1];if(ev===undefined)return"";const v=ev.type==="mate"?`#${ev.val}`:(ev.val>0?"+":"")+ev.val.toFixed(1);const c=ev.type==="mate"?"var(--red)":ev.val>0.5?"var(--green)":ev.val<-0.5?"var(--red)":"var(--tx3)";return` <span class="mv-eval" style="color:${c}">${v}</span>`}
+function updEvalDisplay(ev){if(!ev)return;let pct=50;if(ev.type==="mate")pct=ev.val>0?96:4;else pct=Math.max(4,Math.min(96,50+ev.val*8));const ew=document.getElementById("evalW");if(ew)ew.style.height=pct+"%";const el=document.getElementById("evalLbl");if(el)el.textContent=ev.type==="mate"?"#"+ev.val:(ev.val>0?"+":"")+ev.val.toFixed(1);const et=document.getElementById("evalTxt");if(et)et.innerHTML=`<span style="color:${ev.type==="mate"?"var(--red)":ev.val>0.3?"var(--green)":ev.val<-0.3?"var(--red)":"var(--accent)"};font-weight:700">${ev.type==="mate"?"#"+ev.val:(ev.val>0?"+":"")+ev.val.toFixed(1)}</span>${ev.best?` Beste: ${ev.best}`:""}`}
+// Stockfish
 function loadSF(){if(sfReady)return;const btn=document.getElementById("sfBtn");if(btn){btn.style.background="var(--accent)";btn.textContent="Laden..."}
-  fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js").then(r=>r.blob()).then(blob=>{const url=URL.createObjectURL(blob);sfW=new Worker(url);
-  sfW.onmessage=e=>{const msg=e.data;if(typeof msg!=="string")return;if(msg.includes("uciok"))sfW.postMessage("isready");if(msg.includes("readyok")){sfReady=true;const b=document.getElementById("sfBtn");if(b){b.style.background="var(--green)";b.textContent="✓ Stockfish"}}
-  const cp=msg.match(/score cp (-?\d+)/),mt=msg.match(/score mate (-?\d+)/);if(msg.startsWith("info")&&msg.includes("score")){if(mt)sfEval={type:"mate",val:parseInt(mt[1])};else if(cp)sfEval={type:"cp",val:parseInt(cp[1])/100};updEval()}
-  if(msg.includes("bestmove")){const bm=msg.match(/bestmove (\S+)/);const et=document.getElementById("evalTxt");if(et&&bm)et.innerHTML=(sfEval?`<span style="color:${sfEval.type==="mate"?"var(--red)":sfEval.val>0.3?"var(--green)":sfEval.val<-0.3?"var(--red)":"var(--accent)"};font-weight:700">${sfEval.type==="mate"?"#"+sfEval.val:(sfEval.val>0?"+":"")+sfEval.val.toFixed(1)}</span> `:"")+(bm?`Beste: ${bm[1]}`:"")}};
-  sfW.postMessage("uci")}).catch(()=>{const b=document.getElementById("sfBtn");if(b){b.style.background="var(--red)";b.textContent="Fout"}})}
-function analyzePos(fen){if(!sfW||!sfReady)return;sfEval=null;sfW.postMessage("stop");sfW.postMessage(`position fen ${fen}`);sfW.postMessage("go depth 20")}
-function updEval(){if(!sfEval)return;let pct=50;if(sfEval.type==="mate")pct=sfEval.val>0?96:4;else pct=Math.max(4,Math.min(96,50+sfEval.val*8));const ew=document.getElementById("evalW");if(ew)ew.style.height=pct+"%";const el=document.getElementById("evalLbl");if(el)el.textContent=sfEval.type==="mate"?"#"+sfEval.val:(sfEval.val>0?"+":"")+sfEval.val.toFixed(1)}
-
-// ════════════════════════════════════════
-// INFO TAB
-// ════════════════════════════════════════
-function renderInfo(el){el.innerHTML=`<div class="card"><h2 class="card-title">Over ChessMate</h2><p style="color:var(--tx2);line-height:1.8">ChessMate is een gratis toernooi manager met FIDE Elo, bewerkbare paringen, en Stockfish analyse. Gemaakt door Sam Oosterlynck.</p><h3 style="color:var(--brown);font-size:15px;margin-top:20px;font-family:'Playfair Display',serif">♛ FIDE Elo</h3><p style="color:var(--tx2);line-height:1.7;font-size:14px">K=40 (nieuw) → K=20 (&lt;2400) → K=10 (≥2400).</p><div class="formula"><div>Ea = 1 / (1 + 10<sup>(Rb-Ra)/400</sup>)</div><div style="margin-top:4px">Ra' = Ra + K × (Sa - Ea)</div></div><h3 style="color:var(--brown);font-size:15px;margin-top:20px;font-family:'Playfair Display',serif">🔐 Rollen</h3><p style="color:var(--tx2);line-height:1.7;font-size:14px"><strong>Gast:</strong> ranglijst, profielen bekijken. <strong>Importer:</strong> PGN importeren en koppelen. <strong>Host:</strong> volledige toegang.</p><h3 style="color:var(--brown);font-size:15px;margin-top:20px;font-family:'Playfair Display',serif">🔧 Analyse</h3><p style="color:var(--tx2);line-height:1.7;font-size:14px">Stockfish.js in de browser + interactief bord met eval bar en pijltjestoetsen navigatie.</p></div><div class="card"><h3 class="card-title">Locaties</h3><div style="display:flex;gap:12px;flex-wrap:wrap"><div class="loc-card"><span style="font-size:20px">📍</span><strong style="color:var(--brown)">Maandag</strong><span style="color:var(--tx2);font-size:13px">Oud Sint Jozef, Maldegem</span></div><div class="loc-card"><span style="font-size:20px">📍</span><strong style="color:var(--brown)">Donderdag</strong><span style="color:var(--tx2);font-size:13px">Zonneheem, Eeklo</span></div></div></div>`}
-
-// ════════════════════════════════════════
+  fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js").then(r=>r.blob()).then(blob=>{const url=URL.createObjectURL(blob);sfW=new Worker(url);sfW.postMessage("uci");
+  sfW.onmessage=e=>{const msg=e.data;if(typeof msg!=="string")return;if(msg.includes("uciok"))sfW.postMessage("isready");if(msg.includes("readyok")){sfReady=true;R()}
+  if(window._sfResolve&&msg.includes("bestmove")){const cp=window._sfLastCp,mt=window._sfLastMate,bm=msg.match(/bestmove (\S+)/);window._sfResolve({type:mt!==null?"mate":"cp",val:mt!==null?mt:cp!==null?cp/100:0,best:bm?bm[1]:null});window._sfResolve=null}
+  const cpM=msg.match(/score cp (-?\d+)/),mtM=msg.match(/score mate (-?\d+)/);if(msg.startsWith("info")&&msg.includes("score")){if(mtM)window._sfLastMate=parseInt(mtM[1]);else if(cpM){window._sfLastCp=parseInt(cpM[1]);window._sfLastMate=null}}}
+  }).catch(()=>{const b=document.getElementById("sfBtn");if(b){b.style.background="var(--red)";b.textContent="Fout"}})}
+function sfAnalyze(fen){return new Promise(resolve=>{window._sfResolve=resolve;window._sfLastCp=0;window._sfLastMate=null;sfW.postMessage("stop");sfW.postMessage(`position fen ${fen}`);sfW.postMessage("go depth 16")})}
+async function analyzeAll(){if(!sfReady||!anMoves.length||S.analyzing)return;S.analyzing=true;S.anEvals=[];R();
+  const tc=new Chess();S.anEvals[0]=await sfAnalyze(tc.fen());
+  for(let i=0;i<anMoves.length;i++){tc.move(anMoves[i].san);S.anEvals[i+1]=await sfAnalyze(tc.fen())}
+  S.analyzing=false;anIdx=0;chess=new Chess();chess.move(anMoves[0].san);R()}
+// INFO
+function renderInfo(el){el.innerHTML=`<div class="card"><h2 class="card-title">Over ChessMate</h2><p style="color:var(--tx2);line-height:1.8">ChessMate is een gratis toernooi manager met FIDE Elo, bewerkbare paringen, en Stockfish analyse. Gemaakt door Sam Oosterlynck.</p><h3 style="color:var(--brown);font-size:15px;margin-top:20px;font-family:'Playfair Display',serif">♛ FIDE Elo</h3><p style="color:var(--tx2);line-height:1.7;font-size:14px">K=40 (nieuw) → K=20 (&lt;2400) → K=10 (≥2400).</p><div class="formula"><div>Ea = 1 / (1 + 10<sup>(Rb-Ra)/400</sup>)</div><div style="margin-top:4px">Ra' = Ra + K × (Sa - Ea)</div></div><h3 style="color:var(--brown);font-size:15px;margin-top:20px;font-family:'Playfair Display',serif">🔐 Rollen</h3><p style="color:var(--tx2);line-height:1.7;font-size:14px"><strong>Gast:</strong> ranglijst, profielen. <strong>Importer:</strong> PGN koppelen. <strong>Host:</strong> volledige toegang.</p></div><div class="card"><h3 class="card-title">Locaties</h3><div style="display:flex;gap:12px;flex-wrap:wrap"><div class="loc-card"><span style="font-size:20px">📍</span><strong style="color:var(--brown)">Maandag</strong><span style="color:var(--tx2);font-size:13px">Oud Sint Jozef, Maldegem</span></div><div class="loc-card"><span style="font-size:20px">📍</span><strong style="color:var(--brown)">Donderdag</strong><span style="color:var(--tx2);font-size:13px">Huis Coppens, Eeklo</span></div></div></div>`}
 // KEYBOARD
-// ════════════════════════════════════════
-document.addEventListener("keydown",e=>{if(S.tab===3&&anMoves.length){if(e.key==="ArrowLeft"){e.preventDefault();anGo(anIdx-1)}if(e.key==="ArrowRight"){e.preventDefault();anGo(anIdx+1)}}});
-
-// ════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════
+document.addEventListener("keydown",e=>{if(S.tab===3&&anMoves.length&&!S.analyzing){if(e.key==="ArrowLeft"){e.preventDefault();anGo(anIdx-1)}if(e.key==="ArrowRight"){e.preventDefault();anGo(anIdx+1)}}});
 R();
 </script>
 </body>
