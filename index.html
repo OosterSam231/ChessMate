@@ -132,11 +132,26 @@ async function dbLoad(){
 function profileForPlayer(pid){return S.allProfiles?.find(pr=>pr.player_id===pid)}
 async function dbUp(p){await sb.from("players").upsert(p,{onConflict:"id"})}
 async function dbDelP(id){await sb.from("players").delete().eq("id",id)}
-async function dbUT(t){await sb.from("tournaments").upsert(t,{onConflict:"id"})}
+async function dbUT(t){const{error}=await sb.from("tournaments").upsert(t,{onConflict:"id"});if(error){console.error("Tournament save error:",error);alert("Fout bij opslaan: "+error.message)}}
 async function dbDelT(id){await sb.from("tournaments").delete().eq("id",id)}
 async function dbIG(g){await sb.from("games").insert(g)}
 async function dbUG(id,d){await sb.from("games").update(d).eq("id",id)}
 async function dbDG(id){await sb.from("games").delete().eq("id",id)}
+
+// Send email via Edge Function
+async function sendEmail(type,data){
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const res=await fetch(`${SUPA_URL}/functions/v1/send-email`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||SUPA_ANON}`},
+      body:JSON.stringify({type,data})
+    });
+    const result=await res.json();
+    console.log("Email sent:",type,result);
+    return result;
+  }catch(e){console.error("Email failed:",e);return null}
+}
 async function loadProfile(){if(!S.user)return;const{data}=await sb.from("profiles").select("*").eq("id",S.user.id).single();S.profile=data}
 
 // ════════════════════════════════════════
@@ -425,7 +440,11 @@ async function delR(ri){if(!isHost()||!confirm(`Ronde ${ri+1} verwijderen?`))ret
 async function doSw(ri,pi,side){if(!isHost())return;const sm=S.swapMode;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const absent=at.absent||[];if(!sm){S.swapMode={ri,pi,side};R();return}if(sm.ri!==ri){S.swapMode=null;R();return}const f=at.rounds[sm.ri][sm.pi],to=at.rounds[ri][pi];const fId=sm.side==="w"?f.white:f.black,tId=side==="w"?to.white:to.black;if(!fId||absent.includes(fId)||(tId&&absent.includes(tId))){S.swapMode=null;R();return}if(sm.side==="w")f.white=tId||null;else f.black=tId||null;if(side==="w")to.white=fId;else to.black=fId;if(f.black===null)delete f.black;if(to.black===null)delete to.black;S.swapMode=null;await dbUT(at);R()}
 async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];const absent=at.absent||[];const validIds=new Set(at.players||[]);if(!pair.black)return;if(!validIds.has(pair.white)||!validIds.has(pair.black))return;if(absent.includes(pair.white)||absent.includes(pair.black))return;pair.result=result;const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament:at.name,round:ri+1,tournament_id:at.id};S.games.push(g);await dbIG(g);await dbUT(at);R()}
 async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];if(!pair.black)return;const gm=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);if(gm){S.games=S.games.filter(g=>g.id!==gm.id);await dbDG(gm.id)}pair.result=null;await dbUT(at);R()}
-async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";S.activeT=null;await dbUT(at);R()}
+async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";await dbUT(at);
+  // Send tournament summary emails
+  const standings=getStandings(at);
+  sendEmail("tournament_summary",{tournament:at,standings});
+  S.activeT=null;R()}
 function showAddMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const ni=S.players.filter(p=>!(at.players||[]).includes(p.id));if(!ni.length){alert("Iedereen zit er al in.");return}showModal(`<h2 style="font-size:18px">Speler Toevoegen</h2>${ni.map(p=>`<button class="chip" style="margin:4px" onclick="addMid('${p.id}')">${esc(p.name)} (${p.rating})</button>`).join("")}<div style="margin-top:16px;text-align:right"><button class="btn-outline" onclick="closeModal()">Sluiten</button></div>`)}
 async function addMid(pid){
   const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;
@@ -503,7 +522,10 @@ function toggleImp(){const s=document.getElementById("impSec");if(s)s.style.disp
 window._parsed=[];window._linkTgt=null;
 function doParse(){const pgn=document.getElementById("pgnIn")?.value;if(!pgn?.trim())return;window._parsed=parsePGN(pgn);const d=document.getElementById("parsed");if(!d)return;d.innerHTML=window._parsed.map((g,i)=>`<div class="list-item" style="display:flex;align-items:center;gap:8px"><strong>${esc(g.headers.White||"?")}</strong> vs <strong>${esc(g.headers.Black||"?")}</strong><span class="badge">${g.result}</span><span style="color:var(--tx3);font-size:12px">${g.moves.length} zetten</span>${window._linkTgt?`<button class="btn-sm" style="background:var(--green);color:#fff" onclick="linkPGN(${i})">Koppelen</button>`:""}</div>`).join("")}
 function selLink(gid){window._linkTgt=gid;document.querySelectorAll("#linkTgt .list-item").forEach(el=>{el.style.background=el.id===`lt_${gid}`?"var(--goldl)":"transparent"});doParse()}
-async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;const pgn=window._parsed[idx];if(pgn.result&&pgn.result!=="*"&&g.result&&pgn.result!==g.result){if(!confirm(`PGN resultaat is ${pgn.result} maar toernooiresultaat is ${g.result}. Toch koppelen?`))return}g.pgn=pgn.raw;g.moves=pgn.moves;window._linkTgt=null;await dbUG(g.id,{pgn:g.pgn,moves:g.moves});R()}
+async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;const pgn=window._parsed[idx];if(pgn.result&&pgn.result!=="*"&&g.result&&pgn.result!==g.result){if(!confirm(`PGN resultaat is ${pgn.result} maar toernooiresultaat is ${g.result}. Toch koppelen?`))return}g.pgn=pgn.raw;g.moves=pgn.moves;window._linkTgt=null;await dbUG(g.id,{pgn:g.pgn,moves:g.moves});
+  // Send PGN upload emails
+  sendEmail("pgn_linked",{game:g,whiteName:pN(g.white),blackName:pN(g.black)});
+  R()}
 
 // ════════════════════════════════════════
 // ANALYSE TAB (full game analysis)
