@@ -224,10 +224,9 @@ async function resetAndShowTutorial(){
 }
 
 function checkShowWelcomeTutorial(){
-  // Show once per account, tracked in profile
   if(S.profile&&!S.profile.tutorial_done){
     showTutorial(SITE_STEPS,async()=>{
-      await sb.from("profiles").update({tutorial_done:true}).eq("id",S.user.id);
+      if(S.user?.id!=="guest")await sb.from("profiles").update({tutorial_done:true}).eq("id",S.user.id);
       if(S.profile)S.profile.tutorial_done=true;
     });
   }
@@ -292,7 +291,19 @@ async function doSignin(){
   const{error}=await sb.auth.signInWithPassword({email,password:pw});
   if(error)showAuthErr(error.message)}
 
-async function doSignout(){await sb.auth.signOut();S.user=null;S.profile=null;S.tab=0;R()}
+async function doSignout(){if(S.user?.id==="guest"){S.user=null;S.profile=null;S.tab=0;R();return}await sb.auth.signOut();S.user=null;S.profile=null;S.tab=0;R()}
+
+async function doGuest(){
+  // Guest mode: no login, load public data, show tutorial
+  S.user={id:"guest",email:"gast@chessmate.be"};
+  S.profile={role:"visitor",display_name:"Gast",tutorial_done:false};
+  S.loading=true;R();
+  await dbLoad();
+  S.loading=false;R();
+  setTimeout(()=>showTutorial(SITE_STEPS,()=>{S.profile.tutorial_done=true;}),600);
+}
+
+function isGuest(){return S.user?.id==="guest"}
 
 async function doResetPw(){
   const email=document.getElementById("authEmail")?.value?.trim();
@@ -420,6 +431,7 @@ function renderAuth(root){
       <input class="auth-input" id="authEmail" type="email" placeholder="Email..." autocomplete="email">
       <input class="auth-input" id="authPw" type="password" placeholder="Wachtwoord..." onkeydown="if(event.key==='Enter')doSignin()" autocomplete="current-password">
       <button class="auth-btn" onclick="doSignin()">Inloggen</button>
+      <button class="auth-btn" onclick="doGuest()" style="background:transparent;color:var(--tx2);border:1.5px solid var(--cb);margin-top:0">Doorgaan als gast</button>
       <div style="display:flex;justify-content:space-between;margin-top:4px"><span class="auth-link" onclick="S.authMode='register';R()">Account aanmaken</span><span class="auth-link" onclick="S.authMode='reset';R()">Wachtwoord vergeten?</span></div>
       <div class="auth-err" id="authErr"></div>
     </div></div>`;
