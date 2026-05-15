@@ -95,11 +95,31 @@ td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--bg2)}tr:nth-
 .toggle.on{background:var(--green)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle.on::after{transform:translateX(20px)}
+/* TUTORIAL STYLES */
+.tut-overlay{position:fixed;inset:0;background:rgba(30,20,10,.55);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.tut-box{background:var(--card);border-radius:16px;max-width:540px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;animation:tutIn .3s ease}
+@keyframes tutIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.tut-header{background:var(--brown);padding:20px 24px 16px;color:#fff}
+.tut-header h2{font-family:'Playfair Display',serif;font-size:20px;color:#e8d5a8;margin-bottom:4px}
+.tut-header p{font-size:13px;color:#b0916a;margin:0}
+.tut-progress{display:flex;gap:6px;padding:14px 24px 0;background:var(--brown)}
+.tut-dot{height:4px;border-radius:2px;background:rgba(255,255,255,.25);flex:1;transition:background .3s}
+.tut-dot.active{background:#e8d5a8}
+.tut-dot.done{background:rgba(255,255,255,.5)}
+.tut-body{padding:24px;min-height:180px}
+.tut-step-icon{font-size:36px;margin-bottom:12px;display:block}
+.tut-step-title{font-size:18px;font-weight:700;color:var(--brown);margin-bottom:8px;font-family:'Playfair Display',serif}
+.tut-step-text{font-size:14px;color:var(--tx2);line-height:1.7}
+.tut-step-text b{color:var(--brown)}
+.tut-footer{padding:16px 24px;border-top:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center;background:var(--bg)}
+.tut-skip{font-size:13px;color:var(--tx3);cursor:pointer;text-decoration:underline}
+.tut-nav{display:flex;gap:8px}
 @media(max-width:640px){.main{padding:14px 10px 40px}.card{padding:14px}.title{font-size:18px}.header-top{flex-wrap:wrap}}
 </style>
 </head>
 <body>
 <div id="root"></div>
+<div id="tutRoot"></div>
 <script>
 // ════════════════════════════════════════
 // CONFIG — VUL JE SUPABASE KEYS IN
@@ -111,7 +131,7 @@ const sb=window.supabase.createClient(SUPA_URL,SUPA_ANON);
 // ════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════
-const S={user:null,profile:null,allProfiles:[],tab:0,players:[],tournaments:[],games:[],activeT:null,swapMode:null,profileId:null,viewT:null,loading:true,authMode:"login",analyzing:false,anEvals:[],editingProfile:false};
+const S={user:null,profile:null,allProfiles:[],tab:0,players:[],tournaments:[],games:[],activeT:null,swapMode:null,profileId:null,viewT:null,loading:true,authMode:"login",analyzing:false,anEvals:[],editingProfile:false,dbDown:false};
 const TABS=["Spelers","Toernooi","Partijen","Analyse","Profiel"],ICONS=["♟","⚔","📋","🔍","👤"],INIT_R=1500;
 function esc(s){if(!s)return"";const d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
@@ -132,37 +152,121 @@ async function dbLoad(){
 function profileForPlayer(pid){return S.allProfiles?.find(pr=>pr.player_id===pid)}
 async function dbUp(p){await sb.from("players").upsert(p,{onConflict:"id"})}
 async function dbDelP(id){await sb.from("players").delete().eq("id",id)}
-async function dbUT(t){const{error}=await sb.from("tournaments").upsert(t,{onConflict:"id"});if(error){console.error("Tournament save error:",error);alert("Fout bij opslaan: "+error.message)}}
+async function dbUT(t){await sb.from("tournaments").upsert(t,{onConflict:"id"})}
 async function dbDelT(id){await sb.from("tournaments").delete().eq("id",id)}
 async function dbIG(g){await sb.from("games").insert(g)}
 async function dbUG(id,d){await sb.from("games").update(d).eq("id",id)}
 async function dbDG(id){await sb.from("games").delete().eq("id",id)}
-
-// Send email via Edge Function
-async function sendEmail(type,data){
-  try{
-    const{data:{session}}=await sb.auth.getSession();
-    const res=await fetch(`${SUPA_URL}/functions/v1/send-email`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||SUPA_ANON}`},
-      body:JSON.stringify({type,data})
-    });
-    const result=await res.json();
-    console.log("Email sent:",type,result);
-    return result;
-  }catch(e){console.error("Email failed:",e);return null}
-}
+async function sendEmail(type,data){try{const{data:{session}}=await sb.auth.getSession();await fetch(`${SUPA_URL}/functions/v1/send-email`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token||SUPA_ANON}`},body:JSON.stringify({type,data})})}catch(e){console.error("Email failed:",e)}}
 async function loadProfile(){if(!S.user)return;const{data}=await sb.from("profiles").select("*").eq("id",S.user.id).single();S.profile=data}
 
 // ════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// ONBOARDING TUTORIALS
+// ════════════════════════════════════════
+const SITE_STEPS=[
+  {icon:"♛",title:"Welkom bij ChessMate!",text:"ChessMate is de toernooi manager voor de schaakclub. Hier kan je <b>ranglijst bekijken</b>, <b>spelersprofielen</b> openen, partijen analyseren, en als host toernooien beheren. We geven je een snelle rondleiding."},
+  {icon:"♟",title:"Spelers & Ranglijst",text:"In het tabblad <b>Spelers</b> zie je de volledige ranglijst gesorteerd op Elo rating. Klik op een naam om het <b>spelersprofiel</b> te openen met statistieken, Elo grafiek en partijgeschiedenis."},
+  {icon:"⚔",title:"Toernooien",text:"In het tabblad <b>Toernooi</b> zie je actieve en beëindigde toernooien. Klik op een beëindigd toernooi voor de volledige eindstand en rondes. Als host kan je hier ook nieuwe toernooien starten."},
+  {icon:"📋",title:"Partijen & PGN",text:"In het tabblad <b>Partijen</b> staan alle gespeelde partijen. Als er een PGN bestand gekoppeld is, zie je een groene <b>🔍 PGN</b> knop — klik hierop om de partij direct te analyseren."},
+  {icon:"🔍",title:"Stockfish Analyse",text:"In het tabblad <b>Analyse</b> kan je partijen analyseren met de Stockfish schaakengine. Laad een PGN, klik <b>🔧 Stockfish</b> om de engine te laden, en dan <b>⚡ Analyseer alles</b> voor een volledige analyse met eval bar."},
+  {icon:"👤",title:"Jouw Profiel",text:"In het tabblad <b>Profiel</b> kan je je <b>profielfoto</b> en <b>bio</b> instellen, en je account koppelen aan jouw naam in de ranglijst. Zo verschijnt je foto bij je naam. Je kan ook email notificaties aan/uitzetten."},
+  {icon:"✅",title:"Je bent klaar!",text:"Veel plezier bij de schaakclub! Heb je vragen of problemen? Contacteer <b>Sam Oosterlynck</b>. Als je je wachtwoord vergeet, gebruik dan de 'Wachtwoord vergeten?' link op het inlogscherm."},
+];
+const TOERNOOI_STEPS=[
+  {icon:"⚔",title:"Toernooi Aanmaken",text:"Geef het toernooi een naam (bv. <b>\"Clubavond 21 april\"</b>), kies de locatie, en selecteer de deelnemers door op hun naam te klikken. Klik daarna op <b>⚔ Start Toernooi</b>."},
+  {icon:"👥",title:"Afwezigen & Timing",text:"<b>Belangrijk:</b> controleer altijd wie er aanwezig is <b>vóór</b> je een ronde genereert. Markeer afwezigen als <b>✗ Afwezig</b> in de stand — zij worden dan niet meegenomen in de volgende ronde."},
+  {icon:"🔀",title:"Rondes Genereren",text:"Klik op <b>+ Ronde</b> om automatisch Swiss-paringen te maken. De nieuwste ronde staat altijd bovenaan. Je kan paringen aanpassen door op een <b>spelersnaam te klikken</b> en daarna op de naam van de andere speler."},
+  {icon:"📊",title:"Resultaten Invoeren",text:"Bij elke pairing klik je op <b>1-0</b> (wit wint), <b>½-½</b> (remise), of <b>0-1</b> (zwart wint). Fout ingevoerd? Klik op <b>reset</b> naast het resultaat om het ongedaan te maken."},
+  {icon:"🏁",title:"Toernooi Beëindigen",text:"Als alle rondes gespeeld zijn, klik je op <b>✓ Beëindigen</b>. De Elo ratings worden automatisch herberekend. Deelnemers met email notificaties aan krijgen een samenvatting. <b>Let op: dit kan niet ongedaan gemaakt worden!</b>"},
+];
+
+let _tutStep=0,_tutSteps=[],_tutClose=null;
+
+function showTutorial(steps,onClose){
+  _tutStep=0;_tutSteps=steps;_tutClose=onClose;renderTutorial();
+}
+
+function renderTutorial(){
+  document.getElementById("tutRoot")?.remove();
+  const s=_tutSteps[_tutStep];const total=_tutSteps.length;const isLast=_tutStep===total-1;
+  const el=document.createElement("div");el.id="tutRoot";el.className="tut-overlay";
+  el.innerHTML=`<div class="tut-box">
+    <div class="tut-header">
+      <h2>${s.icon} ${s.title}</h2>
+      <p>Stap ${_tutStep+1} van ${total}</p>
+    </div>
+    <div class="tut-progress">${_tutSteps.map((_,i)=>`<div class="tut-dot${i<_tutStep?" done":i===_tutStep?" active":""}"></div>`).join("")}</div>
+    <div class="tut-body">
+      <p class="tut-step-text">${s.text}</p>
+    </div>
+    <div class="tut-footer">
+      <span class="tut-skip" onclick="closeTutorial()">Overslaan</span>
+      <div class="tut-nav">
+        ${_tutStep>0?`<button class="btn-outline" style="padding:7px 16px;font-size:13px" onclick="tutNav(-1)">← Vorige</button>`:""}
+        <button class="btn" style="padding:7px 20px;font-size:13px" onclick="${isLast?"closeTutorial()":"tutNav(1)"}">${isLast?"✓ Klaar":"Volgende →"}</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+}
+function tutNav(dir){_tutStep=Math.max(0,Math.min(_tutSteps.length-1,_tutStep+dir));renderTutorial()}
+function closeTutorial(){document.getElementById("tutRoot")?.remove();if(_tutClose)_tutClose()}
+async function resetAndShowTutorial(){
+  await sb.from("profiles").update({tutorial_done:false}).eq("id",S.user.id);
+  if(S.profile)S.profile.tutorial_done=false;
+  showTutorial(SITE_STEPS,async()=>{
+    await sb.from("profiles").update({tutorial_done:true}).eq("id",S.user.id);
+    if(S.profile)S.profile.tutorial_done=true;
+  });
+}
+
+function checkShowWelcomeTutorial(){
+  // Show once per account, tracked in profile
+  if(S.profile&&!S.profile.tutorial_done){
+    showTutorial(SITE_STEPS,async()=>{
+      await sb.from("profiles").update({tutorial_done:true}).eq("id",S.user.id);
+      if(S.profile)S.profile.tutorial_done=true;
+    });
+  }
+}
+function checkShowTournamentTutorial(){
+  // Show when host starts first tournament
+  const hosted=S.tournaments.filter(t=>(t.players||[]).length>0);
+  const key="tut_tournooi_done";
+  if(!localStorage.getItem(key)&&hosted.length<=1){
+    localStorage.setItem(key,"1");
+    setTimeout(()=>showTutorial(TOERNOOI_STEPS,null),300);
+  }
+}
+
+let _dbCd=60,_dbAtt=0,_dbTimer=null;
+function dbRetry(){_dbAtt++;const el=document.getElementById("dbRetryStatus");if(el)el.textContent="Verbinding proberen (poging "+_dbAtt+")...";setTimeout(()=>window.location.reload(),1500)}
+function startDbRetryTimer(){if(_dbTimer)clearInterval(_dbTimer);_dbCd=60;_dbTimer=setInterval(()=>{_dbCd--;const el=document.getElementById("dbRetryStatus");if(_dbCd<=0){window.location.reload();return}if(el)el.textContent="Automatisch opnieuw proberen over "+_dbCd+"s..."},1000)}
+
 async function initAuth(){
+  // DB health check first
+  try{
+    await Promise.race([
+      sb.from("players").select("id",{count:"exact",head:true}),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),8000))
+    ]);
+    S.dbDown=false;
+  }catch{S.dbDown=true;S.loading=false;R();return}
   const{data:{session}}=await sb.auth.getSession();
-  if(session){S.user=session.user;await loadProfile();S.loading=true;R();await dbLoad();R()}else{S.loading=false;R()}
+  if(session){S.user=session.user;await loadProfile();S.loading=true;R();await dbLoad();R()}
+  else{S.loading=false;R()}
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==="SIGNED_IN"&&session){S.user=session.user;await loadProfile();S.loading=true;R();await dbLoad();R()}
-    else if(event==="SIGNED_OUT"){S.user=null;S.profile=null;R()}})
+    if(event==="PASSWORD_RECOVERY"){
+      // User clicked reset link — show new password screen
+      S.user=session?.user||null;S.authMode="newpassword";S.loading=false;R();return}
+    if(event==="SIGNED_IN"&&session&&S.authMode!=="newpassword"){
+      S.user=session.user;await loadProfile();S.loading=true;R();await dbLoad();R();
+      setTimeout(()=>checkShowWelcomeTutorial(),600);}
+    else if(event==="SIGNED_OUT"){S.user=null;S.profile=null;R()}
+  })
 }
 
 async function doSignup(){
@@ -193,9 +297,22 @@ async function doSignout(){await sb.auth.signOut();S.user=null;S.profile=null;S.
 async function doResetPw(){
   const email=document.getElementById("authEmail")?.value?.trim();
   if(!email){showAuthErr("Vul je email in.");return}
-  const{error}=await sb.auth.resetPasswordForEmail(email);
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
   if(error)showAuthErr(error.message);
-  else showAuthErr("Reset link verstuurd naar je email!","var(--green)")}
+  else showAuthErr("Reset link verstuurd! Check je email.","var(--green)")}
+
+async function doNewPassword(){
+  const pw1=document.getElementById("newPw1")?.value;
+  const pw2=document.getElementById("newPw2")?.value;
+  if(!pw1||pw1.length<6){showAuthErr("Minstens 6 tekens.");return}
+  if(pw1!==pw2){showAuthErr("Wachtwoorden komen niet overeen.");return}
+  const{error}=await sb.auth.updateUser({password:pw1});
+  if(error){showAuthErr(error.message);return}
+  await sb.auth.signOut();
+  S.authMode="login";S.user=null;window.location.hash="";
+  R();
+  setTimeout(()=>showAuthErr("Wachtwoord gewijzigd! Je kan nu inloggen.","var(--green)"),100)
+}
 
 function showAuthErr(msg,color){const e=document.getElementById("authErr");if(e){e.textContent=msg;e.style.color=color||"var(--red)"}}
 
@@ -214,6 +331,49 @@ if(!validIds.has(white)&&!validIds.has(black))return;if(result==="1-0"){if(valid
 // RENDER
 // ════════════════════════════════════════
 function R(){const root=document.getElementById("root");
+  // DB DOWN
+  if(S.dbDown){root.innerHTML=`<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#faf6f0,#e8e0d4)">
+    <div style="max-width:500px;width:100%">
+      <div style="background:var(--brown);border-radius:12px 12px 0 0;padding:16px 24px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px;color:#e8d5a8">♛</span>
+        <div><div style="font-size:16px;font-weight:600;color:#e8d5a8;font-family:'Playfair Display',serif">ChessMate</div><div style="font-size:10px;color:#a08060;letter-spacing:1px">by Sam Oosterlynck</div></div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--cb);border-radius:0 0 12px 12px;box-shadow:0 8px 32px rgba(92,61,46,.12);overflow:hidden">
+        <div style="background:#fdf3f3;border-bottom:1px solid #e8c0c0;padding:20px 24px;display:flex;align-items:flex-start;gap:14px">
+          <div style="width:44px;height:44px;background:#fff;border-radius:50%;border:2px solid #d4a0a0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚠️</div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:#b05050;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Error 503 — Service Unavailable</div>
+            <div style="font-size:18px;font-weight:700;color:var(--red);font-family:'Playfair Display',serif">Database tijdelijk niet bereikbaar</div>
+          </div>
+        </div>
+        <div style="padding:24px">
+          <div style="background:var(--bg2);border-radius:8px;border:1px solid var(--bg3);padding:16px;margin-bottom:18px">
+            <div style="display:flex;gap:10px;margin-bottom:10px"><div style="width:7px;height:7px;border-radius:50%;background:var(--tx3);margin-top:6px;flex-shrink:0"></div><div style="font-size:14px;color:var(--tx2);line-height:1.6">De database is mogelijk in <strong>slaapstand</strong> gegaan door inactiviteit.</div></div>
+            <div style="display:flex;gap:10px;margin-bottom:10px"><div style="width:7px;height:7px;border-radius:50%;background:var(--tx3);margin-top:6px;flex-shrink:0"></div><div style="font-size:14px;color:var(--tx2);line-height:1.6">Dit is <strong>geen dataverlies</strong> — alle gegevens zijn bewaard.</div></div>
+            <div style="display:flex;gap:10px"><div style="width:7px;height:7px;border-radius:50%;background:var(--tx3);margin-top:6px;flex-shrink:0"></div><div style="font-size:14px;color:var(--tx2);line-height:1.6">Normaal opgelost binnen <strong>5 minuten</strong> na contactname.</div></div>
+          </div>
+          <p style="font-size:11px;color:var(--tx3);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Contacteer de beheerder</p>
+          <div style="background:var(--bg);border-radius:8px;border:1px solid var(--cb);padding:14px;margin-bottom:18px;display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;background:var(--brown);color:#e8d5a8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-family:'Playfair Display',serif;font-weight:700;flex-shrink:0">S</div>
+            <div><div style="font-size:15px;font-weight:600;color:var(--brown)">Sam Oosterlynck</div><div style="font-size:12px;color:var(--tx3);margin-top:2px">Beheerder & ontwikkelaar van ChessMate</div></div>
+          </div>
+          <div id="dbRetryStatus" style="font-size:13px;color:var(--tx3);margin-bottom:14px">Automatisch opnieuw proberen over 60s...</div>
+          <button onclick="dbRetry()" style="width:100%;padding:13px;background:var(--brown);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer">🔄 Opnieuw proberen</button>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--tx3)">ChessMate · by Sam Oosterlynck</div>
+    </div>
+  </div>`;
+  startDbRetryTimer();return}
+  // NEW PASSWORD (after reset link click)
+  if(S.authMode==="newpassword"){root.innerHTML=`<div class="auth-screen"><div class="auth-box">
+    <span class="auth-logo">♛</span><h1 class="auth-title">Nieuw Wachtwoord</h1>
+    <span class="auth-byline" style="margin-bottom:16px;display:block">Kies een nieuw wachtwoord</span>
+    <input class="auth-input" id="newPw1" type="password" placeholder="Nieuw wachtwoord (min. 6 tekens)..." onkeydown="if(event.key==='Enter')doNewPassword()">
+    <input class="auth-input" id="newPw2" type="password" placeholder="Herhaal wachtwoord..." onkeydown="if(event.key==='Enter')doNewPassword()">
+    <button class="auth-btn" onclick="doNewPassword()">Wachtwoord Opslaan</button>
+    <div class="auth-err" id="authErr"></div>
+  </div></div>`;setTimeout(()=>document.getElementById("newPw1")?.focus(),100);return}
   // Not logged in
   if(!S.user){renderAuth(root);return}
   // Loading
@@ -295,6 +455,11 @@ function renderMyProfile(el){
       <div class="settings-row"><span>Email bij PGN upload van mijn partij</span><div class="toggle ${p.email_pgn_upload?"on":""}" onclick="togglePref('email_pgn_upload',this)"></div></div>
     </div>
     ${isHost()?`<div class="card"><h3 class="card-title">Gebruikersbeheer (Host)</h3><p class="hint" style="margin-bottom:12px">Klik op een rol om te wijzigen.</p><div id="userList"></div></div>`:""}
+    <div class="card">
+      <h3 class="card-title">Hulp</h3>
+      <div class="settings-row"><span style="font-size:14px">Website rondleiding opnieuw bekijken</span><button class="btn-sm" style="background:var(--brown);color:#fff;padding:5px 14px" onclick="resetAndShowTutorial()">Toon tutorial</button></div>
+      ${isHost()?`<div class="settings-row"><span style="font-size:14px">Toernooi tutorial opnieuw bekijken</span><button class="btn-sm" style="background:var(--brown);color:#fff;padding:5px 14px" onclick="localStorage.removeItem('tut_tournooi_done');showTutorial(TOERNOOI_STEPS,null)">Toon tutorial</button></div>`:""}
+    </div>
     <div class="card"><button class="btn-outline" style="color:var(--red);border-color:var(--red)" onclick="doSignout()">Uitloggen</button></div>`;
   if(isHost())loadUserList()}
 
@@ -377,18 +542,117 @@ function showProfile(id){S.profileId=id;R()}
 function renderPlayerProfile(el){
   const p=pById(S.profileId);if(!p){S.profileId=null;R();return}
   const linked=profileForPlayer(p.id);
-  const pg=S.games.filter(g=>g.white===p.id||g.black===p.id);let w=0,d=0,l=0;
-  pg.forEach(g=>{if((g.white===p.id&&g.result==="1-0")||(g.black===p.id&&g.result==="0-1"))w++;else if(g.result==="1/2-1/2")d++;else if(g.result&&g.result!=="bye")l++});
+  const pg=S.games.filter(g=>g.white===p.id||g.black===p.id);
+  let w=0,d=0,l=0,wStreak=0,bestStreak=0,curStreak=0;
+  const chronoGames=[...pg].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  chronoGames.forEach(g=>{
+    const won=(g.white===p.id&&g.result==="1-0")||(g.black===p.id&&g.result==="0-1");
+    const drew=g.result==="1/2-1/2";
+    const lost=g.result&&!won&&!drew&&g.result!=="bye";
+    if(won){w++;curStreak++;bestStreak=Math.max(bestStreak,curStreak)}
+    else if(drew){d++;curStreak=0}
+    else if(lost){l++;curStreak=0}
+  });
+  // Best result in tournament
+  const finTourneys=S.tournaments.filter(t=>t.status==="finished"&&(t.players||[]).includes(p.id));
+  let bestPos=null,bestTName="";
+  finTourneys.forEach(t=>{const st=getStandings(t);const pos=st.findIndex(s=>s.id===p.id)+1;if(pos>0&&(!bestPos||pos<bestPos)){bestPos=pos;bestTName=t.name;}});
+  // Win rate bar
+  const total=w+d+l;const wPct=total?Math.round(w/total*100):0;const dPct=total?Math.round(d/total*100):0;const lPct=total?100-wPct-dPct:0;
+  // Most played opponent
+  const oppCount={};chronoGames.forEach(g=>{const oId=g.white===p.id?g.black:g.white;if(oId)oppCount[oId]=(oppCount[oId]||0)+1});
+  const topOpp=Object.entries(oppCount).sort((a,b)=>b[1]-a[1])[0];
   const hist=p.rating_history||[];
   const avContent=linked?.avatar_url?`<img src="${esc(linked.avatar_url)}">`:`<span>${esc((p.name||"?")[0].toUpperCase())}</span>`;
   const isOwnProfile=S.profile?.player_id===p.id;
+
   el.innerHTML=`<button class="btn-outline" style="margin-bottom:16px" onclick="S.profileId=null;R()">← Terug</button>
-    <div class="card"><div class="profile-header"><div class="profile-avatar-lg">${avContent}</div><div style="flex:1"><h2 style="font-size:20px;margin-bottom:0">${esc(p.name)}</h2>${linked?`<span style="font-size:13px;color:var(--tx3)">@${esc(linked.display_name)}</span>`:""}<br><span style="font-size:13px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span>${isOwnProfile?` · <span class="auth-link" onclick="setTab(4)">Profiel bewerken</span>`:""}</div><div style="text-align:right"><div class="stat-val" style="font-size:26px">${p.rating}</div><div class="stat-label">Elo</div></div></div>
-    ${linked?.bio?`<p style="color:var(--tx2);line-height:1.6;margin-bottom:14px;font-style:italic">"${esc(linked.bio)}"</p>`:""}
-    <div class="stat-grid"><div class="stat-box"><div class="stat-val">${pg.length}</div><div class="stat-label">Partijen</div></div><div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div><div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div><div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div><div class="stat-box"><div class="stat-val">${pg.length?Math.round((w+d*.5)/pg.length*100):0}%</div><div class="stat-label">Score</div></div></div></div>
-    ${hist.length>1?`<div class="card"><h3 class="card-title">Elo Verloop</h3>${renderChart(hist)}</div>`:""}
-    <div class="card"><h3 class="card-title">Partijen</h3>${pg.length===0?'<p class="empty">Geen partijen.</p>':""}${[...pg].reverse().slice(0,20).map(g=>{const isW=g.white===p.id,oId=isW?g.black:g.white;const r=g.result==="1/2-1/2"?"½":((isW&&g.result==="1-0")||(!isW&&g.result==="0-1"))?"W":"L";const rc=r==="W"?"var(--green)":r==="L"?"var(--red)":"var(--accent)";return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div><span style="color:${rc};font-weight:700;width:20px;display:inline-block">${r}</span> vs <strong>${esc(pN(oId))}</strong></div><div style="font-size:12px;color:var(--tx3)">${g.date||""}</div></div>`}).join("")}</div>`}
-function renderChart(hist){const W=500,H=130,pad=30;const rs=hist.map(h=>h.rating);const mn=Math.min(...rs)-30,mx=Math.max(...rs)+30,rng=mx-mn||1;const pts=hist.map((h,i)=>({x:pad+(i/(hist.length-1||1))*(W-pad*2),y:H-pad-((h.rating-mn)/rng*(H-pad*2)),r:h.rating}));const path=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--bg3)"/><path d="${path}" fill="none" stroke="var(--brown)" stroke-width="2.5" stroke-linejoin="round"/>${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--brown)" stroke="var(--card)" stroke-width="2"><title>${p.r}</title></circle>`).join("")}</svg>`}
+  <div class="card">
+    <div class="profile-header">
+      <div class="profile-avatar-lg">${avContent}</div>
+      <div style="flex:1">
+        <h2 style="font-size:20px;margin-bottom:2px">${esc(p.name)}</h2>
+        ${linked?`<span style="font-size:13px;color:var(--tx3)">@${esc(linked.display_name)}</span><br>`:""}
+        <span style="font-size:13px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span>
+        ${isOwnProfile?` · <span class="auth-link" onclick="setTab(4)">Bewerken</span>`:""}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:32px;font-weight:700;color:var(--brown);font-family:'Fira Code',monospace">${p.rating}</div>
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px">Elo Rating</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">K=${getK(p.rating,p.games_played||0)}</div>
+      </div>
+    </div>
+    ${linked?.bio?`<div style="background:var(--bg);border-radius:8px;padding:12px 16px;margin-bottom:4px;border-left:3px solid var(--brown)"><p style="color:var(--tx2);line-height:1.6;font-style:italic;font-size:14px">"${esc(linked.bio)}"</p></div>`:""}
+  </div>
+
+  ${pg.length>0?`<div class="card">
+    <h3 class="card-title">Statistieken</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div>
+    </div>
+    ${total>0?`<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx3);margin-bottom:4px"><span>Winrate</span><span>${wPct}%</span></div>
+      <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;background:var(--bg3)">
+        ${wPct>0?`<div style="width:${wPct}%;background:var(--green);transition:width .4s"></div>`:""}
+        ${dPct>0?`<div style="width:${dPct}%;background:var(--accent);transition:width .4s"></div>`:""}
+        ${lPct>0?`<div style="width:${lPct}%;background:var(--red);transition:width .4s"></div>`:""}
+      </div>
+      <div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--tx3)">
+        <span><span style="color:var(--green)">●</span> Win ${wPct}%</span>
+        <span><span style="color:var(--accent)">●</span> Remise ${dPct}%</span>
+        <span><span style="color:var(--red)">●</span> Verlies ${lPct}%</span>
+      </div>
+    </div>`:""}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+      <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-label">Partijen</div></div>
+      <div class="stat-box"><div class="stat-val">${finTourneys.length}</div><div class="stat-label">Toernooien</div></div>
+      ${bestPos?`<div class="stat-box"><div class="stat-val">#${bestPos}</div><div class="stat-label">Beste positie</div></div>`:""}
+      ${bestStreak>1?`<div class="stat-box"><div class="stat-val" style="color:var(--green)">${bestStreak}</div><div class="stat-label">Beste reeks</div></div>`:""}
+      ${topOpp?`<div class="stat-box"><div class="stat-val" style="font-size:13px;line-height:1.3">${esc(pN(topOpp[0]))}</div><div class="stat-label">Meest gespeeld</div></div>`:""}
+    </div>
+  </div>`:""}
+
+  ${hist.length>1?`<div class="card"><h3 class="card-title">Elo Verloop</h3>${renderChart(hist)}</div>`:""}
+
+  <div class="card">
+    <h3 class="card-title">Recente Partijen</h3>
+    ${pg.length===0?'<p class="empty">Nog geen partijen.</p>':""}
+    ${[...pg].reverse().slice(0,20).map(g=>{
+      const isW=g.white===p.id,oId=isW?g.black:g.white;
+      const won=(isW&&g.result==="1-0")||(!isW&&g.result==="0-1");
+      const drew=g.result==="1/2-1/2";
+      const res=drew?"½":won?"W":"L";
+      const rc=won?"var(--green)":drew?"var(--accent)":"var(--red)";
+      const clr=isW?"♔":"♚";
+      return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:24px;height:24px;border-radius:50%;background:${rc}18;color:${rc};font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${res}</span>
+          <div>
+            <span style="font-size:14px">vs <strong>${esc(pN(oId))}</strong></span>
+            <span style="font-size:11px;color:var(--tx3);margin-left:6px">${clr} ${isW?"Wit":"Zwart"}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--tx3)">${g.date||""}</div>
+          ${g.tournament_id?`<div style="font-size:11px;color:var(--tx3)">${esc(S.tournaments.find(t=>t.id===g.tournament_id)?.name||"")}</div>`:""}
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`
+}
+function renderChart(hist){const W=500,H=150,pad=40;const rs=hist.map(h=>h.rating);const mn=Math.min(...rs)-40,mx=Math.max(...rs)+40,rng=mx-mn||1;const pts=hist.map((h,i)=>({x:pad+(i/(hist.length-1||1))*(W-pad*2),y:H-pad-((h.rating-mn)/rng*(H-pad*2)),r:h.rating,e:h.event||""}));const linePath=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");const areaPath=linePath+` L${pts[pts.length-1].x.toFixed(1)} ${H-pad} L${pts[0].x.toFixed(1)} ${H-pad} Z`;
+return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px;overflow:visible">
+  <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5c3d2e" stop-opacity="0.15"/><stop offset="100%" stop-color="#5c3d2e" stop-opacity="0"/></linearGradient></defs>
+  <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="var(--bg3)" stroke-width="1"/>
+  <line x1="${pad}" y1="${H-pad}" x2="${W-pad/2}" y2="${H-pad}" stroke="var(--bg3)" stroke-width="1"/>
+  <text x="${pad-6}" y="${pad+4}" text-anchor="end" font-size="10" fill="var(--tx3)">${mx-40}</text>
+  <text x="${pad-6}" y="${H-pad+4}" text-anchor="end" font-size="10" fill="var(--tx3)">${mn+40}</text>
+  <path d="${areaPath}" fill="url(#cg)"/>
+  <path d="${linePath}" fill="none" stroke="var(--brown)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  ${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--brown)" stroke="var(--card)" stroke-width="2"><title>${p.r}${p.e?" — "+p.e:""}</title></circle>`).join("")}
+</svg>`}
 
 // ════════════════════════════════════════
 // TOURNAMENT DETAIL VIEW
@@ -418,7 +682,7 @@ window._sel=new Set();
 function togP(id){window._sel.has(id)?window._sel.delete(id):window._sel.add(id);updC()}
 function togAll(){window._sel.size===S.players.length?window._sel.clear():S.players.forEach(p=>window._sel.add(p.id));updC()}
 function updC(){document.querySelectorAll("#chips .chip[data-id]").forEach(c=>c.classList.toggle("active",window._sel.has(c.dataset.id)));const c=document.getElementById("selC");if(c)c.textContent=window._sel.size}
-async function createT(){if(!isHost())return;const n=document.getElementById("tNm")?.value?.trim(),l=document.getElementById("tLc")?.value;if(!n||window._sel.size<2){alert("Naam + minstens 2 spelers.");return}const t={id:uid(),name:n,location:l==="__c"?"Andere":l,date:new Date().toISOString().split("T")[0],players:[...window._sel],rounds:[],status:"active"};S.tournaments.push(t);S.activeT=t.id;await dbUT(t);R()}
+async function createT(){if(!isHost())return;const n=document.getElementById("tNm")?.value?.trim(),l=document.getElementById("tLc")?.value;if(!n||window._sel.size<2){alert("Naam + minstens 2 spelers.");return}const t={id:uid(),name:n,location:l==="__c"?"Andere":l,date:new Date().toISOString().split("T")[0],players:[...window._sel],rounds:[],status:"active"};S.tournaments.push(t);S.activeT=t.id;await dbUT(t);R();checkShowTournamentTutorial();}
 async function delT(id){if(!isHost()||!confirm("Toernooi verwijderen?"))return;S.tournaments=S.tournaments.filter(t=>t.id!==id);await dbDelT(id);R()}
 function isAbsent(at,pid){return(at.absent||[]).includes(pid)}
 async function toggleAbsent(pid){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!isHost())return;if(!at.absent)at.absent=[];const nowAbsent=at.absent.includes(pid);if(nowAbsent){at.absent=at.absent.filter(x=>x!==pid)}else{at.absent.push(pid);// In unplayed rounds: if this player is paired, convert to bye for the absent player
@@ -438,13 +702,21 @@ function renderActive(el,at){const st=getStandings(at),sm=S.swapMode;let smN="";
 async function genR(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;if(!at.rounds)at.rounds=[];const absent=at.absent||[];const activePlayers=S.players.filter(p=>(at.players||[]).includes(p.id)&&!absent.includes(p.id));at.rounds.push(swissPair(activePlayers,at.rounds));await dbUT(at);R()}
 async function delR(ri){if(!isHost()||!confirm(`Ronde ${ri+1} verwijderen?`))return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;at.rounds.splice(ri,1);await dbUT(at);R()}
 async function doSw(ri,pi,side){if(!isHost())return;const sm=S.swapMode;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const absent=at.absent||[];if(!sm){S.swapMode={ri,pi,side};R();return}if(sm.ri!==ri){S.swapMode=null;R();return}const f=at.rounds[sm.ri][sm.pi],to=at.rounds[ri][pi];const fId=sm.side==="w"?f.white:f.black,tId=side==="w"?to.white:to.black;if(!fId||absent.includes(fId)||(tId&&absent.includes(tId))){S.swapMode=null;R();return}if(sm.side==="w")f.white=tId||null;else f.black=tId||null;if(side==="w")to.white=fId;else to.black=fId;if(f.black===null)delete f.black;if(to.black===null)delete to.black;S.swapMode=null;await dbUT(at);R()}
-async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];const absent=at.absent||[];const validIds=new Set(at.players||[]);if(!pair.black)return;if(!validIds.has(pair.white)||!validIds.has(pair.black))return;if(absent.includes(pair.white)||absent.includes(pair.black))return;pair.result=result;const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament:at.name,round:ri+1,tournament_id:at.id};S.games.push(g);await dbIG(g);await dbUT(at);R()}
+async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];const absent=at.absent||[];const validIds=new Set(at.players||[]);if(!pair.black)return;if(!validIds.has(pair.white)||!validIds.has(pair.black))return;if(absent.includes(pair.white)||absent.includes(pair.black))return;pair.result=result;
+  // Check if game already exists (prevents duplicates after refresh)
+  const existing=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);
+  if(!existing){
+    const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament_id:at.id,round:ri+1};
+    S.games.push(g);await dbIG(g);
+  } else {
+    // Update existing game result if different
+    if(existing.result!==result){existing.result=result;await dbUG(existing.id,{result});}
+  }
+  await dbUT(at);R()}
 async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];if(!pair.black)return;const gm=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);if(gm){S.games=S.games.filter(g=>g.id!==gm.id);await dbDG(gm.id)}pair.result=null;await dbUT(at);R()}
-async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";await dbUT(at);
-  // Send tournament summary emails
-  const standings=getStandings(at);
-  sendEmail("tournament_summary",{tournament:at,standings});
-  S.activeT=null;R()}
+async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";S.activeT=null;await dbUT(at);
+  const standings=getStandings(at);sendEmail("tournament_summary",{tournament:at,standings});
+  R()}
 function showAddMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const ni=S.players.filter(p=>!(at.players||[]).includes(p.id));if(!ni.length){alert("Iedereen zit er al in.");return}showModal(`<h2 style="font-size:18px">Speler Toevoegen</h2>${ni.map(p=>`<button class="chip" style="margin:4px" onclick="addMid('${p.id}')">${esc(p.name)} (${p.rating})</button>`).join("")}<div style="margin-top:16px;text-align:right"><button class="btn-outline" onclick="closeModal()">Sluiten</button></div>`)}
 async function addMid(pid){
   const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;
@@ -523,9 +795,7 @@ window._parsed=[];window._linkTgt=null;
 function doParse(){const pgn=document.getElementById("pgnIn")?.value;if(!pgn?.trim())return;window._parsed=parsePGN(pgn);const d=document.getElementById("parsed");if(!d)return;d.innerHTML=window._parsed.map((g,i)=>`<div class="list-item" style="display:flex;align-items:center;gap:8px"><strong>${esc(g.headers.White||"?")}</strong> vs <strong>${esc(g.headers.Black||"?")}</strong><span class="badge">${g.result}</span><span style="color:var(--tx3);font-size:12px">${g.moves.length} zetten</span>${window._linkTgt?`<button class="btn-sm" style="background:var(--green);color:#fff" onclick="linkPGN(${i})">Koppelen</button>`:""}</div>`).join("")}
 function selLink(gid){window._linkTgt=gid;document.querySelectorAll("#linkTgt .list-item").forEach(el=>{el.style.background=el.id===`lt_${gid}`?"var(--goldl)":"transparent"});doParse()}
 async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;const pgn=window._parsed[idx];if(pgn.result&&pgn.result!=="*"&&g.result&&pgn.result!==g.result){if(!confirm(`PGN resultaat is ${pgn.result} maar toernooiresultaat is ${g.result}. Toch koppelen?`))return}g.pgn=pgn.raw;g.moves=pgn.moves;window._linkTgt=null;await dbUG(g.id,{pgn:g.pgn,moves:g.moves});
-  // Send PGN upload emails
-  sendEmail("pgn_linked",{game:g,whiteName:pN(g.white),blackName:pN(g.black)});
-  R()}
+  sendEmail("pgn_linked",{game:g,whiteName:pN(g.white),blackName:pN(g.black)});R()}
 
 // ════════════════════════════════════════
 // ANALYSE TAB (full game analysis)
