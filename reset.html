@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChessMate — Nieuw Wachtwoord</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#faf6f0;--bg2:#f0ebe3;--cb:#ddd3c4;--brown:#5c3d2e;--bl:#7a5a48;--tx:#3a2e24;--tx2:#6b5d50;--tx3:#9a8b7c;--red:#9c4040;--green:#4a7c59}
+body{font-family:'Source Sans 3',sans-serif;background:linear-gradient(135deg,#faf6f0,#e8e0d4);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:#fff;border-radius:16px;padding:40px 36px;max-width:400px;width:100%;box-shadow:0 8px 30px rgba(92,61,46,.12);text-align:center;border:1px solid var(--cb)}
+.logo{font-size:48px;color:var(--brown);display:block;margin-bottom:8px}
+h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--brown);margin-bottom:4px}
+.sub{font-size:12px;color:var(--tx3);letter-spacing:1px;margin-bottom:24px;display:block}
+input{width:100%;padding:12px 16px;background:var(--bg);border:1.5px solid var(--cb);border-radius:10px;font-size:14px;color:var(--tx);outline:none;margin-bottom:12px;font-family:inherit}
+input:focus{border-color:var(--bl)}
+button{width:100%;padding:12px;background:var(--brown);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}
+button:hover{background:var(--bl)}
+.msg{font-size:13px;margin-top:12px;min-height:20px}
+.err{color:var(--red)}
+.ok{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="box">
+  <span class="logo">♛</span>
+  <h1>Nieuw Wachtwoord</h1>
+  <span class="sub">by Sam Oosterlynck</span>
+  <input type="password" id="pw1" placeholder="Nieuw wachtwoord (min. 6 tekens)..." onkeydown="if(event.key==='Enter')save()">
+  <input type="password" id="pw2" placeholder="Herhaal wachtwoord..." onkeydown="if(event.key==='Enter')save()">
+  <button onclick="save()">Wachtwoord Opslaan</button>
+  <div class="msg" id="msg"></div>
+</div>
+<script>
+const SUPA_URL="https://uzxuwyzhwsgnaitqgvtx.supabase.co";
+const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6eHV3eXpod3NnbmFpdHFndnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjU2NTAsImV4cCI6MjA5MTc0MTY1MH0.6PPPWYpegPzQpkisIOwmOaeLIleSb7Yiq7QSjcE7Uv4";
+const sb=window.supabase.createClient(SUPA_URL,SUPA_ANON);
+
+// Supabase puts the tokens in the URL hash — process them
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+    document.getElementById("msg").textContent="Je kan nu een nieuw wachtwoord instellen.";
+    document.getElementById("msg").className="msg ok";
+  }
+});
+
+// Also handle the hash tokens on load
+const hash=window.location.hash;
+if(hash){
+  const params=new URLSearchParams(hash.substring(1));
+  const access_token=params.get("access_token");
+  const refresh_token=params.get("refresh_token");
+  if(access_token){
+    sb.auth.setSession({access_token,refresh_token}).catch(console.error);
+  }
+}
+
+async function save(){
+  const pw1=document.getElementById("pw1").value;
+  const pw2=document.getElementById("pw2").value;
+  const msg=document.getElementById("msg");
+  if(!pw1||pw1.length<6){msg.textContent="Wachtwoord moet minstens 6 tekens zijn.";msg.className="msg err";return}
+  if(pw1!==pw2){msg.textContent="Wachtwoorden komen niet overeen.";msg.className="msg err";return}
+  const{error}=await sb.auth.updateUser({password:pw1});
+  if(error){msg.textContent=error.message;msg.className="msg err";return}
+  await sb.auth.signOut();
+  msg.textContent="Wachtwoord gewijzigd! Je wordt doorgestuurd...";
+  msg.className="msg ok";
+  setTimeout(()=>window.location.href="/",2000);
+}
+</script>
+</body>
+</html>

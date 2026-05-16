@@ -147,7 +147,13 @@ function closeModal(){document.getElementById("modalRoot")?.remove()}
 // SUPABASE DATA LAYER
 // ════════════════════════════════════════
 async function dbLoad(){
-  const[p,t,g,pr]=await Promise.all([sb.from("players").select("*").order("rating",{ascending:false}),sb.from("tournaments").select("*").order("date",{ascending:false}),sb.from("games").select("*").order("date",{ascending:false}),sb.from("profiles").select("*")]);
+  // games table = PGN only. All stats on-the-fly from tournaments.
+  const[p,t,g,pr]=await Promise.all([
+    sb.from("players").select("*").order("rating",{ascending:false}),
+    sb.from("tournaments").select("*").order("date",{ascending:false}),
+    sb.from("games").select("*").not("pgn","is",null),
+    sb.from("profiles").select("*")
+  ]);
   S.players=p.data||[];S.tournaments=t.data||[];S.games=g.data||[];S.allProfiles=pr.data||[];S.loading=false}
 function profileForPlayer(pid){return S.allProfiles?.find(pr=>pr.player_id===pid)}
 async function dbUp(p){await sb.from("players").upsert(p,{onConflict:"id"})}
@@ -328,11 +334,65 @@ async function doNewPassword(){
 function showAuthErr(msg,color){const e=document.getElementById("authErr");if(e){e.textContent=msg;e.style.color=color||"var(--red)"}}
 
 // ════════════════════════════════════════
-// ELO, SWISS, PGN (same as before)
+// STATS ON-THE-FLY FROM TOURNAMENTS
 // ════════════════════════════════════════
+function calcPlayerStats(pid){
+  // Compute everything from tournaments.rounds — no games table needed
+  let w=0,d=0,l=0,bestStreak=0,curStreak=0;
+  const gameList=[]; // {white,black,result,date,tName,tId,round,board}
+  const oppCount={};
+  // Sort tournaments by date ascending for streak calc
+  const sorted=[...S.tournaments].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  sorted.forEach(t=>{
+    (t.rounds||[]).forEach((round,ri)=>{
+      round.forEach(pair=>{
+        if(!pair.result||pair.result==="bye")return;
+        if(pair.white!==pid&&pair.black!==pid)return;
+        const isW=pair.white===pid;
+        const oId=isW?pair.black:pair.white;
+        const won=(isW&&pair.result==="1-0")||(!isW&&pair.result==="0-1");
+        const drew=pair.result==="1/2-1/2";
+        const lost=!won&&!drew;
+        if(won){w++;curStreak++;bestStreak=Math.max(bestStreak,curStreak)}
+        else if(drew){d++;curStreak=0}
+        else{l++;curStreak=0}
+        if(oId)oppCount[oId]=(oppCount[oId]||0)+1;
+        gameList.push({white:pair.white,black:pair.black,result:pair.result,date:t.date,tName:t.name,tId:t.id,round:ri+1,board:pair.board,pgn:null,id:null});
+      });
+    });
+  });
+  // Also include standalone games (with PGN) for the game list display
+  const standaloneGames=S.games.filter(g=>g.pgn&&(g.white===pid||g.black===pid)&&!sorted.some(t=>t.id===g.tournament_id));
+  standaloneGames.forEach(g=>{
+    const isW=g.white===pid;
+    const won=(isW&&g.result==="1-0")||(!isW&&g.result==="0-1");
+    const drew=g.result==="1/2-1/2";
+    const lost=!won&&!drew;
+    if(won)w++;else if(drew)d++;else if(lost)l++;
+  });
+  const topOpp=Object.entries(oppCount).sort((a,b)=>b[1]-a[1])[0];
+  const finTourneys=S.tournaments.filter(t=>t.status==="finished"&&(t.players||[]).includes(pid));
+  let bestPos=null,bestTName="";
+  finTourneys.forEach(t=>{const st=getStandings(t);const pos=st.findIndex(s=>s.id===pid)+1;if(pos>0&&(!bestPos||pos<bestPos)){bestPos=pos;bestTName=t.name;}});
+  // Get games WITH pgn from games table for this player
+  const pgnGames=S.games.filter(g=>g.pgn&&(g.white===pid||g.black===pid));
+  return{w,d,l,bestStreak,topOpp,bestPos,bestTName,finTourneys,gameList,pgnGames,total:w+d+l};
+}
+
+function calcTotalGamesPlayed(pid){
+  let count=0;
+  S.tournaments.forEach(t=>{
+    (t.rounds||[]).forEach(round=>{
+      round.forEach(pair=>{
+        if(pair.result&&pair.result!=="bye"&&pair.black&&(pair.white===pid||pair.black===pid))count++;
+      });
+    });
+  });
+  return count;
+}
 function getK(r,g){return g<30?40:r<2400?20:10}
 function expSc(a,b){return 1/(1+Math.pow(10,(b-a)/400))}
-function fideUp(p,opps,res){if(!opps.length)return{rating:p.rating};const K=getK(p.rating,p.games_played||0);let r=p.rating;for(let i=0;i<opps.length;i++)r+=K*(res[i]-expSc(r,opps[i].rating));return{rating:Math.round(r)}}
+function fideUp(p,opps,res){if(!opps.length)return{rating:p.rating};const K=getK(p.rating,calcTotalGamesPlayed(p.id));let r=p.rating;for(let i=0;i<opps.length;i++)r+=K*(res[i]-expSc(r,opps[i].rating));return{rating:Math.round(r)}}
 function swissPair(players,prev){const sc={},ch={},opp={};players.forEach(p=>{sc[p.id]=0;ch[p.id]=[];opp[p.id]=new Set()});prev.forEach(r=>r.forEach(({white,black,result})=>{if(result==="1-0")sc[white]+=1;else if(result==="0-1")sc[black]+=1;else if(result==="1/2-1/2"){sc[white]+=.5;sc[black]+=.5}else if(result==="bye")sc[white]+=1;if(black){ch[white]?.push("w");ch[black]?.push("b");opp[white]?.add(black);opp[black]?.add(white)}}));const sorted=[...players].sort((a,b)=>(sc[b.id]||0)-(sc[a.id]||0)||b.rating-a.rating);const paired=new Set(),pairings=[];let bye=null;if(sorted.length%2!==0){for(let i=sorted.length-1;i>=0;i--){const had=prev.some(r=>r.some(p=>p.white===sorted[i].id&&p.result==="bye"));if(!had){bye=sorted[i];break}}if(!bye)bye=sorted[sorted.length-1]}function pickC(a,b){const d1=(ch[a.id]?.filter(c=>c==="w").length||0)-(ch[a.id]?.filter(c=>c==="b").length||0);const d2=(ch[b.id]?.filter(c=>c==="w").length||0)-(ch[b.id]?.filter(c=>c==="b").length||0);if(d1>d2)return[b.id,a.id];if(d1<d2)return[a.id,b.id];return a.rating>=b.rating?[a.id,b.id]:[b.id,a.id]}for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id||opp[p1.id]?.has(p2.id))continue;const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}for(let i=0;i<sorted.length;i++){const p1=sorted[i];if(paired.has(p1.id)||p1.id===bye?.id)continue;for(let j=i+1;j<sorted.length;j++){const p2=sorted[j];if(paired.has(p2.id)||p2.id===bye?.id)continue;const[w,b]=pickC(p1,p2);pairings.push({white:w,black:b,result:null,board:pairings.length+1});paired.add(p1.id);paired.add(p2.id);break}}if(bye)pairings.push({white:bye.id,black:null,result:"bye",board:pairings.length+1});return pairings}
 function parsePGN(pgn){const games=[],secs=pgn.trim().split(/\n\s*\n(?=\[)/);for(const sec of secs){if(!sec.trim())continue;const h={};let m;const hr=/\[(\w+)\s+"([^"]*)"\]/g;while((m=hr.exec(sec))!==null)h[m[1]]=m[2];const mt=sec.replace(/\[.*?\]\s*/g,"").trim().replace(/\{[^}]*\}/g,"").replace(/\d+\.\.\./g,"").replace(/\d+\./g,"").split(/\s+/).filter(x=>x&&!["1-0","0-1","1/2-1/2","*"].includes(x));games.push({headers:h,moves:mt,raw:sec,result:h.Result||"*"})}return games.length?games:[{headers:{},moves:[],raw:pgn,result:"*"}]}
 function getStandings(at){const sc={};const validIds=new Set(at.players||[]);(at.players||[]).forEach(id=>{sc[id]=0});(at.rounds||[]).forEach(r=>r.forEach(({white,black,result})=>{// Only count scores for players still in the tournament
@@ -554,105 +614,17 @@ function showProfile(id){S.profileId=id;R()}
 function renderPlayerProfile(el){
   const p=pById(S.profileId);if(!p){S.profileId=null;R();return}
   const linked=profileForPlayer(p.id);
-  const pg=S.games.filter(g=>g.white===p.id||g.black===p.id);
-  let w=0,d=0,l=0,wStreak=0,bestStreak=0,curStreak=0;
-  const chronoGames=[...pg].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  chronoGames.forEach(g=>{
-    const won=(g.white===p.id&&g.result==="1-0")||(g.black===p.id&&g.result==="0-1");
-    const drew=g.result==="1/2-1/2";
-    const lost=g.result&&!won&&!drew&&g.result!=="bye";
-    if(won){w++;curStreak++;bestStreak=Math.max(bestStreak,curStreak)}
-    else if(drew){d++;curStreak=0}
-    else if(lost){l++;curStreak=0}
-  });
-  // Best result in tournament
-  const finTourneys=S.tournaments.filter(t=>t.status==="finished"&&(t.players||[]).includes(p.id));
-  let bestPos=null,bestTName="";
-  finTourneys.forEach(t=>{const st=getStandings(t);const pos=st.findIndex(s=>s.id===p.id)+1;if(pos>0&&(!bestPos||pos<bestPos)){bestPos=pos;bestTName=t.name;}});
-  // Win rate bar
-  const total=w+d+l;const wPct=total?Math.round(w/total*100):0;const dPct=total?Math.round(d/total*100):0;const lPct=total?100-wPct-dPct:0;
-  // Most played opponent
-  const oppCount={};chronoGames.forEach(g=>{const oId=g.white===p.id?g.black:g.white;if(oId)oppCount[oId]=(oppCount[oId]||0)+1});
-  const topOpp=Object.entries(oppCount).sort((a,b)=>b[1]-a[1])[0];
+  const{w,d,l,bestStreak,topOpp,bestPos,bestTName,finTourneys,gameList,pgnGames,total}=calcPlayerStats(p.id);
+  const wPct=total?Math.round(w/total*100):0;const dPct=total?Math.round(d/total*100):0;const lPct=total?100-wPct-dPct:0;
   const hist=p.rating_history||[];
   const avContent=linked?.avatar_url?`<img src="${esc(linked.avatar_url)}">`:`<span>${esc((p.name||"?")[0].toUpperCase())}</span>`;
   const isOwnProfile=S.profile?.player_id===p.id;
-
+  const gamesPlayed=calcTotalGamesPlayed(p.id);
   el.innerHTML=`<button class="btn-outline" style="margin-bottom:16px" onclick="S.profileId=null;R()">← Terug</button>
-  <div class="card">
-    <div class="profile-header">
-      <div class="profile-avatar-lg">${avContent}</div>
-      <div style="flex:1">
-        <h2 style="font-size:20px;margin-bottom:2px">${esc(p.name)}</h2>
-        ${linked?`<span style="font-size:13px;color:var(--tx3)">@${esc(linked.display_name)}</span><br>`:""}
-        <span style="font-size:13px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span>
-        ${isOwnProfile?` · <span class="auth-link" onclick="setTab(4)">Bewerken</span>`:""}
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:32px;font-weight:700;color:var(--brown);font-family:'Fira Code',monospace">${p.rating}</div>
-        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px">Elo Rating</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">K=${getK(p.rating,p.games_played||0)}</div>
-      </div>
-    </div>
-    ${linked?.bio?`<div style="background:var(--bg);border-radius:8px;padding:12px 16px;margin-bottom:4px;border-left:3px solid var(--brown)"><p style="color:var(--tx2);line-height:1.6;font-style:italic;font-size:14px">"${esc(linked.bio)}"</p></div>`:""}
-  </div>
-
-  ${pg.length>0?`<div class="card">
-    <h3 class="card-title">Statistieken</h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-      <div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div>
-    </div>
-    ${total>0?`<div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx3);margin-bottom:4px"><span>Winrate</span><span>${wPct}%</span></div>
-      <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;background:var(--bg3)">
-        ${wPct>0?`<div style="width:${wPct}%;background:var(--green);transition:width .4s"></div>`:""}
-        ${dPct>0?`<div style="width:${dPct}%;background:var(--accent);transition:width .4s"></div>`:""}
-        ${lPct>0?`<div style="width:${lPct}%;background:var(--red);transition:width .4s"></div>`:""}
-      </div>
-      <div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--tx3)">
-        <span><span style="color:var(--green)">●</span> Win ${wPct}%</span>
-        <span><span style="color:var(--accent)">●</span> Remise ${dPct}%</span>
-        <span><span style="color:var(--red)">●</span> Verlies ${lPct}%</span>
-      </div>
-    </div>`:""}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
-      <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-label">Partijen</div></div>
-      <div class="stat-box"><div class="stat-val">${finTourneys.length}</div><div class="stat-label">Toernooien</div></div>
-      ${bestPos?`<div class="stat-box"><div class="stat-val">#${bestPos}</div><div class="stat-label">Beste positie</div></div>`:""}
-      ${bestStreak>1?`<div class="stat-box"><div class="stat-val" style="color:var(--green)">${bestStreak}</div><div class="stat-label">Beste reeks</div></div>`:""}
-      ${topOpp?`<div class="stat-box"><div class="stat-val" style="font-size:13px;line-height:1.3">${esc(pN(topOpp[0]))}</div><div class="stat-label">Meest gespeeld</div></div>`:""}
-    </div>
-  </div>`:""}
-
+  <div class="card"><div class="profile-header"><div class="profile-avatar-lg">${avContent}</div><div style="flex:1"><h2 style="font-size:20px;margin-bottom:2px">${esc(p.name)}</h2>${linked?`<span style="font-size:13px;color:var(--tx3)">@${esc(linked.display_name)}</span><br>`:""}<span style="font-size:13px;color:var(--tx2)">Lid sinds ${p.joined||"?"}</span>${isOwnProfile?` · <span class="auth-link" onclick="setTab(4)">Bewerken</span>`:""}</div><div style="text-align:right"><div style="font-size:32px;font-weight:700;color:var(--brown);font-family:'Fira Code',monospace">${p.rating}</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px">Elo Rating</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">K=${getK(p.rating,gamesPlayed)}</div></div></div>${linked?.bio?`<div style="background:var(--bg);border-radius:8px;padding:12px 16px;margin-bottom:4px;border-left:3px solid var(--brown)"><p style="color:var(--tx2);line-height:1.6;font-style:italic;font-size:14px">"${esc(linked.bio)}"</p></div>`:""}</div>
+  ${total>0?`<div class="card"><h3 class="card-title">Statistieken</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"><div class="stat-box"><div class="stat-val" style="color:var(--green)">${w}</div><div class="stat-label">Winst</div></div><div class="stat-box"><div class="stat-val" style="color:var(--accent)">${d}</div><div class="stat-label">Remise</div></div><div class="stat-box"><div class="stat-val" style="color:var(--red)">${l}</div><div class="stat-label">Verlies</div></div></div><div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx3);margin-bottom:4px"><span>Winrate</span><span>${wPct}%</span></div><div style="height:10px;border-radius:5px;overflow:hidden;display:flex;background:var(--bg3)">${wPct>0?`<div style="width:${wPct}%;background:var(--green)"></div>`:""}${dPct>0?`<div style="width:${dPct}%;background:var(--accent)"></div>`:""}${lPct>0?`<div style="width:${lPct}%;background:var(--red)"></div>`:""}</div><div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--tx3)"><span><span style="color:var(--green)">\u25cf</span> Win ${wPct}%</span><span><span style="color:var(--accent)">\u25cf</span> Remise ${dPct}%</span><span><span style="color:var(--red)">\u25cf</span> Verlies ${lPct}%</span></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px"><div class="stat-box"><div class="stat-val">${gamesPlayed}</div><div class="stat-label">Partijen</div></div><div class="stat-box"><div class="stat-val">${finTourneys.length}</div><div class="stat-label">Toernooien</div></div>${bestPos?`<div class="stat-box"><div class="stat-val">#${bestPos}</div><div class="stat-label">Beste positie</div></div>`:""}${bestStreak>1?`<div class="stat-box"><div class="stat-val" style="color:var(--green)">${bestStreak}</div><div class="stat-label">Beste reeks</div></div>`:""}${topOpp?`<div class="stat-box"><div class="stat-val" style="font-size:13px;line-height:1.3">${esc(pN(topOpp[0]))}</div><div class="stat-label">Meest gespeeld</div></div>`:""}</div></div>`:""}
   ${hist.length>1?`<div class="card"><h3 class="card-title">Elo Verloop</h3>${renderChart(hist)}</div>`:""}
-
-  <div class="card">
-    <h3 class="card-title">Recente Partijen</h3>
-    ${pg.length===0?'<p class="empty">Nog geen partijen.</p>':""}
-    ${[...pg].reverse().slice(0,20).map(g=>{
-      const isW=g.white===p.id,oId=isW?g.black:g.white;
-      const won=(isW&&g.result==="1-0")||(!isW&&g.result==="0-1");
-      const drew=g.result==="1/2-1/2";
-      const res=drew?"½":won?"W":"L";
-      const rc=won?"var(--green)":drew?"var(--accent)":"var(--red)";
-      const clr=isW?"♔":"♚";
-      return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="width:24px;height:24px;border-radius:50%;background:${rc}18;color:${rc};font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${res}</span>
-          <div>
-            <span style="font-size:14px">vs <strong>${esc(pN(oId))}</strong></span>
-            <span style="font-size:11px;color:var(--tx3);margin-left:6px">${clr} ${isW?"Wit":"Zwart"}</span>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:12px;color:var(--tx3)">${g.date||""}</div>
-          ${g.tournament_id?`<div style="font-size:11px;color:var(--tx3)">${esc(S.tournaments.find(t=>t.id===g.tournament_id)?.name||"")}</div>`:""}
-        </div>
-      </div>`;
-    }).join("")}
-  </div>`
+  <div class="card"><h3 class="card-title">Recente Partijen</h3>${gameList.length===0?'<p class="empty">Nog geen partijen.</p>':""} ${[...gameList].reverse().slice(0,20).map(g=>{const isW=g.white===p.id,oId=isW?g.black:g.white;const won=(isW&&g.result==="1-0")||(!isW&&g.result==="0-1");const drew=g.result==="1/2-1/2";const res=drew?"\u00bd":won?"W":"L";const rc=won?"var(--green)":drew?"var(--accent)":"var(--red)";const clr=isW?"\u2654":"\u265a";const pgnGame=pgnGames.find(pg=>pg.tournament_id===g.tId&&pg.round===g.round&&pg.white===g.white&&pg.black===g.black);return`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:24px;border-radius:50%;background:${rc}18;color:${rc};font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${res}</span><div><span style="font-size:14px">vs <strong>${esc(pN(oId))}</strong></span><span style="font-size:11px;color:var(--tx3);margin-left:6px">${clr} ${isW?"Wit":"Zwart"}</span>${pgnGame?`<button class="btn-sm" style="background:var(--gl);color:var(--green);border:1px solid var(--green);margin-left:6px" onclick="openAnalyse('${pgnGame.id}')">\ud83d\udd0d</button>`:""}</div></div><div style="text-align:right"><div style="font-size:12px;color:var(--tx3)">${g.date||""}</div>${g.tName?`<div style="font-size:11px;color:var(--tx3)">${esc(g.tName)} R${g.round}</div>`:""}</div></div>`;}).join("")}</div>`
 }
 function renderChart(hist){const W=500,H=150,pad=40;const rs=hist.map(h=>h.rating);const mn=Math.min(...rs)-40,mx=Math.max(...rs)+40,rng=mx-mn||1;const pts=hist.map((h,i)=>({x:pad+(i/(hist.length-1||1))*(W-pad*2),y:H-pad-((h.rating-mn)/rng*(H-pad*2)),r:h.rating,e:h.event||""}));const linePath=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");const areaPath=linePath+` L${pts[pts.length-1].x.toFixed(1)} ${H-pad} L${pts[0].x.toFixed(1)} ${H-pad} Z`;
 return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px;overflow:visible">
@@ -679,7 +651,7 @@ function renderTournamentDetail(root){const at=S.tournaments.find(t=>t.id===S.vi
 window._spelersShowAll=false;
 function renderSpelers(el){const sorted=[...S.players].sort((a,b)=>b.rating-a.rating);
   const TOP=30;const visible=window._spelersShowAll?sorted:sorted.slice(0,TOP);const hasMore=sorted.length>TOP&&!window._spelersShowAll;
-  el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Speler Toevoegen</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:150px" id="pNm" placeholder="Naam..." onkeydown="if(event.key==='Enter')addP()"><input class="input" style="width:110px" type="number" id="pRt" placeholder="Elo (opt.)" onkeydown="if(event.key==='Enter')addP()"><button class="btn" onclick="addP()">+ Toevoegen</button></div></div>`:""}<div class="card"><h2 class="card-title">Ranglijst (${sorted.length})</h2>${sorted.length===0?'<p class="empty">Nog geen spelers.</p>':`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th class="tl">Naam</th><th>Elo</th><th>K</th><th>P</th>${isHost()?"<th></th>":""}</tr></thead><tbody>${visible.map((p,i)=>{const k=getK(p.rating,p.games_played||0);const kc=k===40?"#c77b1a":k===20?"#3a7ca5":"#4a7c59";return`<tr><td>${i+1}</td><td class="tl"><span class="player-link" onclick="showProfile('${p.id}')" style="font-weight:600">${esc(p.name)}</span></td><td style="font-weight:700;font-size:16px;font-family:'Fira Code',monospace">${p.rating}</td><td><span class="badge" style="background:${kc}18;color:${kc}">K=${k}</span></td><td>${p.games_played||0}</td>${isHost()?`<td><button class="btn-danger" onclick="remP('${p.id}')">✕</button></td>`:""}</tr>`}).join("")}</tbody></table></div>${hasMore?`<div style="text-align:center;margin-top:12px"><button class="btn-outline" onclick="window._spelersShowAll=true;renderSpelers(document.getElementById('app'))">Laad de rest (${sorted.length-TOP} meer)</button></div>`:""}`}</div>`}
+  el.innerHTML=`${isHost()?`<div class="card"><h2 class="card-title">Speler Toevoegen</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" style="flex:1;min-width:150px" id="pNm" placeholder="Naam..." onkeydown="if(event.key==='Enter')addP()"><input class="input" style="width:110px" type="number" id="pRt" placeholder="Elo (opt.)" onkeydown="if(event.key==='Enter')addP()"><button class="btn" onclick="addP()">+ Toevoegen</button></div></div>`:""}<div class="card"><h2 class="card-title">Ranglijst (${sorted.length})</h2>${sorted.length===0?'<p class="empty">Nog geen spelers.</p>':`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th class="tl">Naam</th><th>Elo</th><th>K</th><th>P</th>${isHost()?"<th></th>":""}</tr></thead><tbody>${visible.map((p,i)=>{const gp=calcTotalGamesPlayed(p.id);const k=getK(p.rating,gp);const kc=k===40?"#c77b1a":k===20?"#3a7ca5":"#4a7c59";return`<tr><td>${i+1}</td><td class="tl"><span class="player-link" onclick="showProfile('${p.id}')" style="font-weight:600">${esc(p.name)}</span></td><td style="font-weight:700;font-size:16px;font-family:'Fira Code',monospace">${p.rating}</td><td><span class="badge" style="background:${kc}18;color:${kc}">K=${k}</span></td><td>${gp}</td>${isHost()?`<td><button class="btn-danger" onclick="remP('${p.id}')">✕</button></td>`:""}</tr>`}).join("")}</tbody></table></div>${hasMore?`<div style="text-align:center;margin-top:12px"><button class="btn-outline" onclick="window._spelersShowAll=true;renderSpelers(document.getElementById('app'))">Laad de rest (${sorted.length-TOP} meer)</button></div>`:""}`}</div>`}
 async function addP(){if(!isHost())return;const n=document.getElementById("pNm")?.value?.trim(),r=parseInt(document.getElementById("pRt")?.value)||INIT_R;if(!n)return;const p={id:uid(),name:n,rating:r,games_played:0,joined:new Date().toISOString().split("T")[0],rating_history:[{rating:r,event:"Start"}]};S.players.push(p);await dbUp(p);R()}
 async function remP(id){if(!isHost()||!confirm("Verwijderen?"))return;S.players=S.players.filter(p=>p.id!==id);await dbDelP(id);R()}
 
@@ -716,17 +688,10 @@ async function delR(ri){if(!isHost()||!confirm(`Ronde ${ri+1} verwijderen?`))ret
 async function doSw(ri,pi,side){if(!isHost())return;const sm=S.swapMode;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const absent=at.absent||[];if(!sm){S.swapMode={ri,pi,side};R();return}if(sm.ri!==ri){S.swapMode=null;R();return}const f=at.rounds[sm.ri][sm.pi],to=at.rounds[ri][pi];const fId=sm.side==="w"?f.white:f.black,tId=side==="w"?to.white:to.black;if(!fId||absent.includes(fId)||(tId&&absent.includes(tId))){S.swapMode=null;R();return}if(sm.side==="w")f.white=tId||null;else f.black=tId||null;if(side==="w")to.white=fId;else to.black=fId;if(f.black===null)delete f.black;if(to.black===null)delete to.black;S.swapMode=null;await dbUT(at);R()}
 async function setR(ri,pi,result){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];const absent=at.absent||[];const validIds=new Set(at.players||[]);if(!pair.black)return;if(!validIds.has(pair.white)||!validIds.has(pair.black))return;if(absent.includes(pair.white)||absent.includes(pair.black))return;pair.result=result;
   // Check if game already exists (prevents duplicates after refresh)
-  const existing=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);
-  if(!existing){
-    const g={id:uid(),white:pair.white,black:pair.black,result,date:new Date().toISOString().split("T")[0],tournament_id:at.id,round:ri+1};
-    S.games.push(g);await dbIG(g);
-  } else {
-    // Update existing game result if different
-    if(existing.result!==result){existing.result=result;await dbUG(existing.id,{result});}
-  }
+  // Result stored only in tournament.rounds — no separate games insert needed
   await dbUT(at);R()}
-async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];if(!pair.black)return;const gm=S.games.find(g=>g.tournament_id===at.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);if(gm){S.games=S.games.filter(g=>g.id!==gm.id);await dbDG(gm.id)}pair.result=null;await dbUT(at);R()}
-async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;p.games_played=(p.games_played||0)+pg[p.id].o.length;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";S.activeT=null;await dbUT(at);
+async function clrR(ri,pi){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const pair=at.rounds[ri][pi];if(!pair.black)return;pair.result=null;await dbUT(at);R()}
+async function finishT(){if(!isHost())return;const at=S.tournaments.find(t=>t.id===S.activeT);if(!at||!confirm("Beëindigen en Elo berekenen?"))return;const allG=(at.rounds||[]).flat().filter(p=>p.result&&p.result!=="bye"&&p.black);const pg={};(at.players||[]).forEach(id=>{pg[id]={o:[],r:[]}});allG.forEach(({white,black,result})=>{const wP=pById(white),bP=pById(black);if(!wP||!bP)return;const ws=result==="1-0"?1:result==="0-1"?0:.5;pg[white]?.o.push(bP);pg[white]?.r.push(ws);pg[black]?.o.push(wP);pg[black]?.r.push(1-ws)});for(const p of S.players){if(!pg[p.id]||pg[p.id].o.length===0)continue;const u=fideUp(p,pg[p.id].o,pg[p.id].r);p.rating=u.rating;if(!p.rating_history)p.rating_history=[];p.rating_history.push({rating:p.rating,event:at.name});await dbUp(p)}at.status="finished";S.activeT=null;await dbUT(at);
   const standings=getStandings(at);sendEmail("tournament_summary",{tournament:at,standings});
   R()}
 function showAddMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)return;const ni=S.players.filter(p=>!(at.players||[]).includes(p.id));if(!ni.length){alert("Iedereen zit er al in.");return}showModal(`<h2 style="font-size:18px">Speler Toevoegen</h2>${ni.map(p=>`<button class="chip" style="margin:4px" onclick="addMid('${p.id}')">${esc(p.name)} (${p.rating})</button>`).join("")}<div style="margin-top:16px;text-align:right"><button class="btn-outline" onclick="closeModal()">Sluiten</button></div>`)}
@@ -784,30 +749,99 @@ function showRemMid(){const at=S.tournaments.find(t=>t.id===S.activeT);if(!at)re
 // ════════════════════════════════════════
 // State for partijen tab tournament loading
 window._partijTourneys=null; // null = show only most recent, or array of shown tournament ids
-function renderPartijen(el){const nm=id=>pN(id),rc=r=>r==="1-0"?"var(--green)":r==="0-1"?"var(--red)":"var(--accent)";const unlinked=S.games.filter(g=>!g.pgn&&g.tournament_id);
-  // Build sorted tournament list (most recent first)
+function renderPartijen(el){
+  const nm=id=>pN(id),rc=r=>r==="1-0"?"var(--green)":r==="0-1"?"var(--red)":"var(--accent)";
+  // Build full game list on-the-fly from tournaments, enrich with PGN from games table
   const tourneysWithGames=[...S.tournaments].filter(t=>(t.rounds||[]).some(r=>r.some(p=>p.result&&p.black))).sort((a,b)=>b.date.localeCompare(a.date));
-  // Unlinked sorted: by tournament date desc, then round desc, then board asc
-  const sortedUnlinked=[...unlinked].sort((a,b)=>{const tA=S.tournaments.find(t=>t.id===a.tournament_id),tB=S.tournaments.find(t=>t.id===b.tournament_id);const dA=tA?.date||a.date||"";const dB=tB?.date||b.date||"";if(dB!==dA)return dB.localeCompare(dA);const rDiff=(b.round||0)-(a.round||0);if(rDiff!==0)return rDiff;return (a.board||0)-(b.board||0);});
-  // Group unlinked by tournament
-  const unlinkedByT={};sortedUnlinked.forEach(g=>{const tid=g.tournament_id||"__none";if(!unlinkedByT[tid])unlinkedByT[tid]=[];unlinkedByT[tid].push(g);});
-  const unlinkedHtml=Object.entries(unlinkedByT).map(([tid,gs])=>{const tn=S.tournaments.find(t=>t.id===tid)?.name||"Zonder toernooi";return`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${esc(tn)}</div>${gs.map(g=>`<div class="list-item" style="cursor:pointer" onclick="selLink('${g.id}')" id="lt_${g.id}"><strong>${esc(nm(g.white))}</strong> vs <strong>${esc(nm(g.black))}</strong> <span class="badge">${g.result}</span> <span style="color:var(--tx3);font-size:12px">R${g.round||""}${g.board?" B"+g.board:""}</span></div>`).join("")}</div>`}).join("");
-  // Games grouped by tournament, sorted
+  // For PGN linking: build list of all unlinked tournament pairs
+  const unlinkedPairs=[];
+  tourneysWithGames.forEach(t=>{
+    (t.rounds||[]).forEach((round,ri)=>{
+      round.forEach(pair=>{
+        if(!pair.result||pair.result==="bye"||!pair.black)return;
+        const hasPgn=S.games.some(g=>g.tournament_id===t.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);
+        if(!hasPgn)unlinkedPairs.push({...pair,round:ri+1,tId:t.id,tName:t.name,tDate:t.date});
+      });
+    });
+  });
+  const unlinkedByT={};
+  unlinkedPairs.forEach(p=>{if(!unlinkedByT[p.tId])unlinkedByT[p.tId]=[];unlinkedByT[p.tId].push(p);});
+  const unlinkedHtml=Object.entries(unlinkedByT).map(([tid,pairs])=>{
+    const tn=S.tournaments.find(t=>t.id===tid)?.name||"?";
+    return`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${esc(tn)}</div>
+    ${pairs.map(p=>{const uid=`${p.tId}_${p.round}_${p.white}_${p.black}`;return`<div class="list-item" style="cursor:pointer" onclick="selLinkPair('${uid}')" id="lt_${uid}"><strong>${esc(nm(p.white))}</strong> vs <strong>${esc(nm(p.black))}</strong> <span class="badge">${p.result}</span> <span style="color:var(--tx3);font-size:12px">R${p.round}</span></div>`}).join("")}</div>`;
+  }).join("");
   const showAll=window._partijTourneys==="all";
   const visibleT=showAll?tourneysWithGames:tourneysWithGames.slice(0,1);
-  const gamesHtml=visibleT.map(t=>{const tGames=S.games.filter(g=>g.tournament_id===t.id).sort((a,b)=>{const rd=(b.round||0)-(a.round||0);if(rd!==0)return rd;return(a.board||0)-(b.board||0);});if(!tGames.length)return"";return`<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--brown);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--bg3)">${esc(t.name)} <span style="color:var(--tx3);font-weight:400;font-size:12px">${t.date}</span></div>${tGames.map(g=>`<div class="list-item"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="color:var(--tx3);font-size:11px;min-width:50px">R${g.round||"?"}${g.board?" B"+g.board:""}</span><span style="font-weight:${g.result==="1-0"?700:400}">${esc(nm(g.white))}</span><span class="badge" style="color:${rc(g.result)}">${g.result}</span><span style="font-weight:${g.result==="0-1"?700:400}">${esc(nm(g.black))}</span>${g.pgn?`<button class="btn-sm" style="background:var(--gl);color:var(--green);border:1px solid var(--green)" onclick="openAnalyse('${g.id}')">🔍 PGN</button>`:""} ${isHost()?`<button class="btn-danger" onclick="delGame('${g.id}')">✕</button>`:""}</div></div>`).join("")}</div>`}).join("");
+  const gamesHtml=visibleT.map(t=>{
+    const rows=[];
+    (t.rounds||[]).forEach((round,ri)=>{
+      round.forEach(pair=>{
+        if(!pair.result||!pair.black)return;
+        const pgnGame=S.games.find(g=>g.tournament_id===t.id&&g.round===ri+1&&g.white===pair.white&&g.black===pair.black);
+        rows.push({...pair,round:ri+1,pgn:pgnGame?.pgn||null,gid:pgnGame?.id||null});
+      });
+    });
+    rows.sort((a,b)=>b.round-a.round||(a.board||0)-(b.board||0));
+    if(!rows.length)return"";
+    return`<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--brown);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--bg3)">${esc(t.name)} <span style="color:var(--tx3);font-weight:400;font-size:12px">${t.date}</span></div>
+    ${rows.map(g=>`<div class="list-item"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--tx3);font-size:11px;min-width:50px">R${g.round}${g.board?" B"+g.board:""}</span>
+      <span style="font-weight:${g.result==="1-0"?700:400}">${esc(nm(g.white))}</span>
+      <span class="badge" style="color:${rc(g.result)}">${g.result==="bye"?"BYE":g.result}</span>
+      <span style="font-weight:${g.result==="0-1"?700:400}">${esc(nm(g.black))}</span>
+      ${g.pgn&&g.gid?`<button class="btn-sm" style="background:var(--gl);color:var(--green);border:1px solid var(--green)" onclick="openAnalyse('${g.gid}')">🔍 PGN</button>`:""}
+      ${isHost()&&g.gid?`<button class="btn-danger" onclick="delGame('${g.gid}')">✕</button>`:""}
+    </div></div>`).join("")}</div>`;
+  }).join("");
   const hasMore=tourneysWithGames.length>1&&!showAll;
-  const ungrouped=S.games.filter(g=>!g.tournament_id);
-  const ungroupedHtml=ungrouped.length?`<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--brown);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--bg3)">Overige partijen</div>${ungrouped.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(g=>`<div class="list-item"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:${g.result==="1-0"?700:400}">${esc(nm(g.white))}</span><span class="badge" style="color:${rc(g.result)}">${g.result}</span><span style="font-weight:${g.result==="0-1"?700:400}">${esc(nm(g.black))}</span>${g.pgn?`<button class="btn-sm" style="background:var(--gl);color:var(--green);border:1px solid var(--green)" onclick="openAnalyse('${g.id}')">🔍 PGN</button>`:""} ${isHost()?`<button class="btn-danger" onclick="delGame('${g.id}')">✕</button>`:""}</div></div>`).join("")}</div>`:"";
-  el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="card-title" style="margin:0;border:none;padding:0">Partijen (${S.games.length})</h2>${isImp()?`<button class="btn" onclick="toggleImp()">📥 PGN Koppelen</button>`:""}</div><div id="impSec" style="display:none;margin-top:14px"><textarea class="textarea" rows="6" id="pgnIn" placeholder="Plak PGN vanuit Lichess Studies, chess.com..."></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="doParse()">Parsen</button></div><div id="parsed" style="margin-top:10px"></div>${unlinked.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg3)"><h3 class="card-title">Koppel aan gespeelde partij</h3><p class="hint" style="margin-bottom:8px">Klik partij, dan "Koppelen".</p><div id="linkTgt">${unlinkedHtml}</div></div>`:""}</div></div>${S.games.length>0?`<div class="card"><h3 class="card-title">Partijen per Toernooi</h3>${gamesHtml}${ungroupedHtml}${hasMore?`<div style="text-align:center;margin-top:8px"><button class="btn-outline" onclick="window._partijTourneys='all';renderPartijen(document.getElementById('app'))">📂 Laad oudere toernooien (${tourneysWithGames.length-1} meer)</button></div>`:""}</div>`:""}`}
+  const totalGames=tourneysWithGames.reduce((s,t)=>(t.rounds||[]).reduce((s2,r)=>s2+r.filter(p=>p.result&&p.black&&p.result!=="bye").length,s),0);
+  el.innerHTML=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h2 class="card-title" style="margin:0;border:none;padding:0">Partijen (${totalGames})</h2>
+      ${isImp()?`<button class="btn" onclick="toggleImp()">📥 PGN Koppelen</button>`:""}
+    </div>
+    <div id="impSec" style="display:none;margin-top:14px">
+      <textarea class="textarea" rows="6" id="pgnIn" placeholder="Plak PGN vanuit Lichess Studies, chess.com..."></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" onclick="doParse()">Parsen</button></div>
+      <div id="parsed" style="margin-top:10px"></div>
+      ${unlinkedPairs.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg3)">
+        <h3 class="card-title">Koppel aan gespeelde partij</h3>
+        <p class="hint" style="margin-bottom:8px">Klik een partij aan, dan "Koppelen".</p>
+        <div id="linkTgt">${unlinkedHtml}</div>
+      </div>`:`<p class="hint" style="margin-top:12px">Alle partijen hebben al een PGN gekoppeld.</p>`}
+    </div>
+  </div>
+  ${totalGames>0?`<div class="card"><h3 class="card-title">Partijen per Toernooi</h3>${gamesHtml}${hasMore?`<div style="text-align:center;margin-top:8px"><button class="btn-outline" onclick="window._partijTourneys='all';renderPartijen(document.getElementById('app'))">📂 Laad oudere toernooien (${tourneysWithGames.length-1} meer)</button></div>`:""}</div>`:""}`
+}
 function openAnalyse(gid){const g=S.games.find(x=>x.id===gid);if(!g?.pgn)return;S.tab=3;window._autoLoadPgn=g.pgn;R()}
 async function delGame(id){if(!isHost()||!confirm("Partij verwijderen?"))return;S.games=S.games.filter(g=>g.id!==id);await dbDG(id);R()}
 function toggleImp(){const s=document.getElementById("impSec");if(s)s.style.display=s.style.display==="none"?"block":"none"}
 window._parsed=[];window._linkTgt=null;
 function doParse(){const pgn=document.getElementById("pgnIn")?.value;if(!pgn?.trim())return;window._parsed=parsePGN(pgn);const d=document.getElementById("parsed");if(!d)return;d.innerHTML=window._parsed.map((g,i)=>`<div class="list-item" style="display:flex;align-items:center;gap:8px"><strong>${esc(g.headers.White||"?")}</strong> vs <strong>${esc(g.headers.Black||"?")}</strong><span class="badge">${g.result}</span><span style="color:var(--tx3);font-size:12px">${g.moves.length} zetten</span>${window._linkTgt?`<button class="btn-sm" style="background:var(--green);color:#fff" onclick="linkPGN(${i})">Koppelen</button>`:""}</div>`).join("")}
-function selLink(gid){window._linkTgt=gid;document.querySelectorAll("#linkTgt .list-item").forEach(el=>{el.style.background=el.id===`lt_${gid}`?"var(--goldl)":"transparent"});doParse()}
-async function linkPGN(idx){if(!window._linkTgt||!window._parsed[idx])return;const g=S.games.find(x=>x.id===window._linkTgt);if(!g)return;const pgn=window._parsed[idx];if(pgn.result&&pgn.result!=="*"&&g.result&&pgn.result!==g.result){if(!confirm(`PGN resultaat is ${pgn.result} maar toernooiresultaat is ${g.result}. Toch koppelen?`))return}g.pgn=pgn.raw;g.moves=pgn.moves;window._linkTgt=null;await dbUG(g.id,{pgn:g.pgn,moves:g.moves});
-  sendEmail("pgn_linked",{game:g,whiteName:pN(g.white),blackName:pN(g.black)});R()}
+function selLinkPair(uid){window._linkTgt=uid;document.querySelectorAll("#linkTgt .list-item").forEach(el=>{el.style.background=el.id===`lt_${uid}`?"var(--goldl)":"transparent"});doParse()}
+function selLink(gid){selLinkPair(gid)}
+async function linkPGN(idx){
+  if(!window._linkTgt||!window._parsed[idx])return;
+  const pgn=window._parsed[idx];
+  // Parse the uid: tId_round_white_black
+  const parts=window._linkTgt.split("_");
+  const tId=parts[0],round=parseInt(parts[1]),white=parts[2],black=parts[3];
+  const t=S.tournaments.find(x=>x.id===tId);
+  const pair=t?.rounds?.[round-1]?.find(p=>p.white===white&&p.black===black);
+  if(!pair){alert("Partij niet gevonden.");return}
+  if(pgn.result&&pgn.result!=="*"&&pair.result&&pgn.result!==pair.result){
+    if(!confirm(`PGN resultaat is ${pgn.result} maar toernooiresultaat is ${pair.result}. Toch koppelen?`))return}
+  // Create or update game entry in DB (only for PGN storage)
+  const existingGame=S.games.find(g=>g.tournament_id===tId&&g.round===round&&g.white===white&&g.black===black);
+  if(existingGame){
+    existingGame.pgn=pgn.raw;await dbUG(existingGame.id,{pgn:pgn.raw});
+  } else {
+    const g={id:uid(),white,black,result:pair.result,date:t.date,tournament_id:tId,round,pgn:pgn.raw};
+    S.games.push(g);await dbIG(g);
+  }
+  sendEmail("pgn_linked",{game:{white,black,result:pair.result,tournament:t?.name},whiteName:pN(white),blackName:pN(black)});
+  window._linkTgt=null;R()}
 
 // ════════════════════════════════════════
 // ANALYSE TAB (full game analysis)
